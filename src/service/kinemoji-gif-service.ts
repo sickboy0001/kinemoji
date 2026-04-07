@@ -95,15 +95,15 @@ export async function generateAndUploadGif(params: GifParameters) {
     const textLength = text.replace(/\n/g, "").length;
 
     const frames: { data: Buffer; delay: number }[] = [];
-    const fps = 15;
+    const fps = 10; // 15から10に落としてキャプチャ・エンコード時間を短縮
     const interval = 1000 / fps;
 
     // アニメーションに合わせて時間を計算
-    // ルパンの場合: 文字数 * 0.3s + 1s (余裕)
-    // 通常の場合: 3s
+    // ルパンの場合: 文字数 * 0.3s + 1.5s
+    // サーバーレスのタイムアウト(30s)を考慮し、最大時間を制限
     let duration = 3;
     if (isLupin) {
-      duration = Math.max(3, textLength * 0.3 + 1.5);
+      duration = Math.min(8, Math.max(3, textLength * 0.3 + 1.5));
     }
 
     const totalFrames = Math.floor(fps * duration);
@@ -116,7 +116,7 @@ export async function generateAndUploadGif(params: GifParameters) {
       const frameStart = Date.now();
       const screenshot = await page.screenshot({
         type: "jpeg",
-        quality: 90,
+        quality: 60, // 90から60に落として速度優先
         clip: { x: 0, y: 0, width, height },
       });
 

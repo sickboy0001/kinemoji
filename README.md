@@ -96,6 +96,7 @@ npx drizzle-kit push
   - [deploy](https://kinemoji.netlify.app/)
   - Lupin アニメーションの GIF 生成時における表示タイミングと速度の精度向上。
   - 動的な GIF 録画時間の導入。
+  - サーバーレス環境でのタイムアウト対策（10 FPSへの調整、画質最適化、最大録画時間の制限）。
 
 ---
 
@@ -104,3 +105,4 @@ npx drizzle-kit push
 - [Next.js Documentation](https://nextjs.org/docs)
 - [Framer Motion](https://www.framer.com/motion/)
 - [Turso DB](https://turso.tech/)
+- [netlify](https://app.netlify.com/)
