@@ -27,13 +27,15 @@ export const LupinDisplay = ({
   backColor,
   isRendering = false,
 }: LupinDisplayProps) => {
-  const [highlightIndex, setHighlightIndex] = useState(-1);
-  const [showFull, setShowFull] = useState(false);
-
   const allChars = useMemo(
     () => text.split("").filter((c) => c !== "\n" && c !== "\r"),
     [text],
   );
+
+  const [highlightIndex, setHighlightIndex] = useState(
+    allChars.length > 0 ? 0 : -1,
+  );
+  const [showFull, setShowFull] = useState(false);
 
   const STAGGER_MS = 300;
   const lupinFontSize = useMemo(() => {
@@ -42,24 +44,40 @@ export const LupinDisplay = ({
 
   useEffect(() => {
     setShowFull(false);
-    setHighlightIndex(0);
+    setHighlightIndex(allChars.length > 0 ? 0 : -1);
 
-    let charIdx = 0;
-    const interval = setInterval(() => {
-      charIdx++;
-      if (charIdx < allChars.length) {
-        setHighlightIndex(charIdx);
-      } else {
-        clearInterval(interval);
-        // 最後の文字を表示したままにするため、ここでは -1 にしない
-        setTimeout(() => {
-          setShowFull(true);
-        }, 200);
-      }
-    }, STAGGER_MS);
+    let timer: NodeJS.Timeout;
 
-    return () => clearInterval(interval);
-  }, [allChars]);
+    const startAnimation = () => {
+      let charIdx = 0;
+      timer = setInterval(() => {
+        charIdx++;
+        if (charIdx < allChars.length) {
+          setHighlightIndex(charIdx);
+        } else {
+          clearInterval(timer);
+          // 最後の文字を表示したままにするため、ここでは -1 にしない
+          setTimeout(() => {
+            setShowFull(true);
+          }, 200);
+        }
+      }, STAGGER_MS);
+    };
+
+    if (isRendering) {
+      // GIF生成時は、Playwrightのキャプチャ開始を待つために少し遅延させる
+      const delayTimer = setTimeout(startAnimation, 500);
+      return () => {
+        clearTimeout(delayTimer);
+        if (timer) clearInterval(timer);
+      };
+    } else {
+      startAnimation();
+      return () => {
+        if (timer) clearInterval(timer);
+      };
+    }
+  }, [allChars, isRendering, STAGGER_MS]);
 
   return (
     <div
@@ -70,7 +88,7 @@ export const LupinDisplay = ({
         backgroundColor: backColor,
       }}
     >
-      <AnimatePresence mode={isRendering ? undefined : "wait"}>
+      <AnimatePresence mode={isRendering ? undefined : "sync"} initial={false}>
         {!showFull && highlightIndex >= 0 && (
           <motion.div
             key={`highlight-${highlightIndex}`}

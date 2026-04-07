@@ -19,6 +19,7 @@ interface StandardDisplayProps {
   fontSize: number;
   foreColor: string;
   backColor: string;
+  isRendering?: boolean;
 }
 
 /**
@@ -33,6 +34,7 @@ export const StandardDisplay = ({
   fontSize,
   foreColor,
   backColor,
+  isRendering = false,
 }: StandardDisplayProps) => {
   const charConfigs = useMemo(() => {
     let globalIndex = 0;
@@ -102,7 +104,14 @@ export const StandardDisplay = ({
         gap: `${fontSize * 0.2}px`,
         backgroundColor: backColor,
       }}
-      variants={{ visible: { transition: { staggerChildren: 0.1 } } }}
+      variants={{
+        visible: {
+          transition: {
+            staggerChildren: 0.1,
+            delayChildren: isRendering ? 0.5 : 0,
+          },
+        },
+      }}
     >
       {lines.map((line, lineIndex) => (
         <div

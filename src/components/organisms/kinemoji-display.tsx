@@ -116,6 +116,7 @@ export const KinemojiDisplay = ({
             fontSize={fontSize}
             foreColor={foreColor}
             backColor={backColor}
+            isRendering={isRendering}
           />
         )}
       </div>
