@@ -1,4 +1,9 @@
-import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
+import {
+  sqliteTable,
+  text,
+  integer,
+  primaryKey,
+} from "drizzle-orm/sqlite-core";
 
 export const users = sqliteTable("user", {
   id: text("id").notNull().primaryKey(),
@@ -27,7 +32,7 @@ export const accounts = sqliteTable(
     session_state: text("session_state"),
   },
   (account) => ({
-    pk: [account.provider, account.providerAccountId],
+    pk: primaryKey({ columns: [account.provider, account.providerAccountId] }),
   }),
 );
 
@@ -43,8 +48,8 @@ export const kinemojis = sqliteTable("kinemoji", {
   id: text("id").notNull().primaryKey(),
   shortId: text("short_id").notNull().unique(),
   text: text("text").notNull(),
-  creatorId: text("creator_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
+  parameters: text("parameters"), // JSON 保存用
+  imageUrl: text("image_url"),
+  creatorId: text("creator_id"),
   createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
 });

@@ -1,0 +1,19 @@
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+[build.environment]
+  # Netlifyでのビルド時に使用するNode.jsのバージョンを指定
+  NODE_VERSION = "20"
+  # Next.js 13.5+ では以下のランタイムが推奨されています
+  NEXT_USE_NETLIFY_EDGE = "true"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
+[functions]
+  # サーバーレス関数の設定（GIF生成などでタイムアウトしやすいため）
+  node_runtime = "nodejs20.x"
+  included_files = ["node_modules/playwright-core/**"]
+  # サーバーレス関数のタイムアウト時間を延ばす（最大60秒、デフォルト10秒）
+  timeout = 60
