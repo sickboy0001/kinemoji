@@ -13,7 +13,6 @@
 
 [functions]
   # サーバーレス関数の設定（GIF生成などでタイムアウトしやすいため）
-  node_runtime = "nodejs20.x"
   included_files = ["node_modules/playwright-core/**", "node_modules/@sparticuz/chromium/**"]
   # サーバーレス関数のタイムアウト時間を延ばす（最大60秒、デフォルト10秒）
   timeout = 60
