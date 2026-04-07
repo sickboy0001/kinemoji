@@ -5,9 +5,14 @@ import { db } from "@/lib/turso/db";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: DrizzleAdapter(db),
-  providers: [Google],
+  providers: [
+    Google({
+      clientId: process.env.AUTH_GOOGLE_ID ?? "",
+      clientSecret: process.env.AUTH_GOOGLE_SECRET ?? "",
+    }),
+  ],
   callbacks: {
-    session({ session, user }) {
+    session({ session, user }: any) {
       if (session.user) {
         session.user.id = user.id;
       }
