@@ -77,49 +77,73 @@ export async function generateAndUploadGif(params: GifParameters) {
       render: "true",
     });
 
-    await page.goto(`${baseUrl}/kinemoji/render?${queryParams.toString()}`);
+    const normalizedBaseUrl = baseUrl.replace(/\/$/, "");
+    const renderUrl = `${normalizedBaseUrl}/kinemoji/render?${queryParams.toString()}`;
 
-    // コンポーネントの読み込み待ち
-    await page.waitForSelector(".kinemoji-container");
+    console.log(`Navigating to: ${renderUrl}`);
+    await page.goto(renderUrl, {
+      waitUntil: "networkidle", // ネットワークが落ち着くまで待機
+      timeout: 10000,
+    });
 
-    const frames: Buffer[] = [];
-    const fps = 10;
-    const duration = 2; // 2秒間キャプチャに短縮
-    const totalFrames = fps * duration;
+    console.log("Waiting for .kinemoji-container...");
+    // コンポーネントの読み込み待ち（タイムアウトを短くして原因を切り分け）
+    await page.waitForSelector(".kinemoji-container", { timeout: 5000 });
+    console.log(".kinemoji-container found, starting capture...");
+
+    const isLupin = type === "lupin";
+    const textLength = text.replace(/\n/g, "").length;
+
+    const frames: { data: Buffer; delay: number }[] = [];
+    const fps = 15;
     const interval = 1000 / fps;
+
+    // アニメーションに合わせて時間を計算
+    // ルパンの場合: 文字数 * 0.3s + 1s (余裕)
+    // 通常の場合: 3s
+    let duration = 3;
+    if (isLupin) {
+      duration = Math.max(3, textLength * 0.3 + 1.5);
+    }
+
+    const totalFrames = Math.floor(fps * duration);
+    console.log(
+      `Starting capture: fps=${fps}, duration=${duration}, totalFrames=${totalFrames}`,
+    );
 
     // キャプチャループ
     for (let i = 0; i < totalFrames; i++) {
-      const start = Date.now();
+      const frameStart = Date.now();
       const screenshot = await page.screenshot({
-        type: "png",
+        type: "jpeg",
+        quality: 90,
         clip: { x: 0, y: 0, width, height },
       });
-      frames.push(screenshot);
 
-      // キャプチャにかかった時間を考慮して待機時間を調整
-      const elapsed = Date.now() - start;
+      const elapsed = Date.now() - frameStart;
       const wait = Math.max(0, interval - elapsed);
       if (wait > 0) {
         await new Promise((resolve) => setTimeout(resolve, wait));
       }
+
+      // 次のフレームまでの実際の経過時間を計算
+      const actualDelay = Date.now() - frameStart;
+      frames.push({ data: screenshot, delay: actualDelay });
     }
 
     // GIF生成
     const encoder = new GIFEncoder(width, height);
     encoder.start();
-    encoder.setRepeat(0); // 0 = ループ
-    encoder.setDelay(interval);
+    encoder.setRepeat(0);
     encoder.setQuality(10);
 
     for (const frame of frames) {
-      // sharpを使ってピクセルデータを取得
-      const { data, info } = await sharp(frame)
+      const { data, info } = await sharp(frame.data)
         .ensureAlpha()
         .raw()
         .toBuffer({ resolveWithObject: true });
 
-      // GIFEncoderにピクセルデータを追加（Uint8ClampedArrayが必要な場合があるが、Bufferでも動作することが多い）
+      encoder.setDelay(frame.delay); // 各フレームの実際のキャプチャ間隔をセット
       // @ts-ignore
       encoder.addFrame(data);
     }

@@ -14,6 +14,7 @@ export type AnimationAction =
 
 export interface KinemojiDisplayProps {
   text: string;
+  isRendering?: boolean;
   parameters?:
     | {
         type?: AnimationType;

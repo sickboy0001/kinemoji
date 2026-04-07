@@ -9,10 +9,10 @@ export const kinemojiService = {
       orderBy: [desc(kinemojis.createdAt)],
       limit: 50,
     });
-    console.log(
-      "All kinemojis from DB:",
-      results.map((k) => ({ id: k.id, hasUrl: !!k.imageUrl })),
-    ); // デバッグログ
+    // console.log(
+    //   "All kinemojis from DB:",
+    //   results.map((k) => ({ id: k.id, hasUrl: !!k.imageUrl })),
+    // ); // デバッグログ
     return results;
   },
 

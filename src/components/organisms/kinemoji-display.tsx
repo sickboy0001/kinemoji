@@ -16,7 +16,11 @@ import { StandardDisplay } from "./kinemoji/standard-display";
 
 export type { AnimationType, AnimationAction };
 
-export const KinemojiDisplay = ({ text, parameters }: KinemojiDisplayProps) => {
+export const KinemojiDisplay = ({
+  text,
+  parameters,
+  isRendering = false,
+}: KinemojiDisplayProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isSaving, setIsSaving] = useState(false);
   const lines = text.split(/\r?\n/);
@@ -100,6 +104,7 @@ export const KinemojiDisplay = ({ text, parameters }: KinemojiDisplayProps) => {
             fontSize={fontSize}
             foreColor={foreColor}
             backColor={backColor}
+            isRendering={isRendering}
           />
         ) : (
           <StandardDisplay

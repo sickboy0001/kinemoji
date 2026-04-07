@@ -6,7 +6,9 @@ export default async function RenderPage({
   searchParams: Promise<any>;
 }) {
   const params = await searchParams;
-  const { text, type, action, width, height, foreColor, backColor } = params;
+  const { text, type, action, width, height, foreColor, backColor, render } =
+    params;
+  const isRendering = render === "true";
 
   if (!text) return null;
 
@@ -28,7 +30,11 @@ export default async function RenderPage({
         backgroundColor: backColor,
       }}
     >
-      <KinemojiDisplay text={text} parameters={parameters} />
+      <KinemojiDisplay
+        text={text}
+        parameters={parameters}
+        isRendering={isRendering}
+      />
     </div>
   );
 }

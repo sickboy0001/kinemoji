@@ -2,6 +2,7 @@
 
 import { useEffect, useState, Suspense, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { ExternalLink } from "lucide-react";
 import { KinemojiDisplay } from "@/components/organisms/kinemoji-display";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -124,44 +125,75 @@ function KinemojiListContent() {
               />
             </div>
             <div className="flex gap-2 mt-10">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  const url = `${window.location.origin}/kinemoji/${selected.shortId}`;
-                  navigator.clipboard.writeText(url);
-                  alert("共有URLをコピーしました！");
-                }}
-              >
-                共有URLをコピー
-              </Button>
-              {selected.imageUrl && (
+              <div className="flex items-center gap-1">
                 <Button
                   variant="outline"
-                  onClick={async () => {
-                    try {
-                      if (navigator.clipboard && window.isSecureContext) {
-                        await navigator.clipboard.writeText(selected.imageUrl!);
-                      } else {
-                        const textArea = document.createElement("textarea");
-                        textArea.value = selected.imageUrl!;
-                        textArea.style.position = "fixed";
-                        textArea.style.left = "-9999px";
-                        textArea.style.top = "0";
-                        document.body.appendChild(textArea);
-                        textArea.focus();
-                        textArea.select();
-                        document.execCommand("copy");
-                        textArea.remove();
-                      }
-                      alert("画像URLをコピーしました！");
-                    } catch (err) {
-                      console.error("Copy failed:", err);
-                      alert("コピーに失敗しました");
-                    }
+                  onClick={() => {
+                    const url = `${window.location.origin}/kinemoji/${selected.shortId}`;
+                    navigator.clipboard.writeText(url);
+                    alert("共有URLをコピーしました！");
                   }}
                 >
-                  画像URLをコピー
+                  共有URLをコピー
                 </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-10 w-10"
+                  onClick={() => {
+                    window.open(
+                      `${window.location.origin}/kinemoji/${selected.shortId}`,
+                      "_blank",
+                    );
+                  }}
+                  title="別タブで開く"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                </Button>
+              </div>
+              {selected.imageUrl && (
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="outline"
+                    onClick={async () => {
+                      try {
+                        if (navigator.clipboard && window.isSecureContext) {
+                          await navigator.clipboard.writeText(
+                            selected.imageUrl!,
+                          );
+                        } else {
+                          const textArea = document.createElement("textarea");
+                          textArea.value = selected.imageUrl!;
+                          textArea.style.position = "fixed";
+                          textArea.style.left = "-9999px";
+                          textArea.style.top = "0";
+                          document.body.appendChild(textArea);
+                          textArea.focus();
+                          textArea.select();
+                          document.execCommand("copy");
+                          textArea.remove();
+                        }
+                        alert("画像URLをコピーしました！");
+                      } catch (err) {
+                        console.error("Copy failed:", err);
+                        alert("コピーに失敗しました");
+                      }
+                    }}
+                  >
+                    画像URLをコピー
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-10 w-10"
+                    onClick={() => {
+                      window.open(selected.imageUrl!, "_blank");
+                    }}
+                    title="画像を別タブで開く"
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                  </Button>
+                </div>
               )}
             </div>
           </Card>

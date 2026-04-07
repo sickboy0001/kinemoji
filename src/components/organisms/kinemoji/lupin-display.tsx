@@ -11,6 +11,7 @@ interface LupinDisplayProps {
   fontSize: number;
   foreColor: string;
   backColor: string;
+  isRendering?: boolean;
 }
 
 /**
@@ -24,6 +25,7 @@ export const LupinDisplay = ({
   fontSize,
   foreColor,
   backColor,
+  isRendering = false,
 }: LupinDisplayProps) => {
   const [highlightIndex, setHighlightIndex] = useState(-1);
   const [showFull, setShowFull] = useState(false);
@@ -49,7 +51,7 @@ export const LupinDisplay = ({
         setHighlightIndex(charIdx);
       } else {
         clearInterval(interval);
-        setHighlightIndex(-1);
+        // 最後の文字を表示したままにするため、ここでは -1 にしない
         setTimeout(() => {
           setShowFull(true);
         }, 200);
@@ -68,14 +70,14 @@ export const LupinDisplay = ({
         backgroundColor: backColor,
       }}
     >
-      <AnimatePresence mode="wait">
+      <AnimatePresence mode={isRendering ? undefined : "wait"}>
         {!showFull && highlightIndex >= 0 && (
           <motion.div
             key={`highlight-${highlightIndex}`}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.05, ease: "linear" }}
+            exit={{ opacity: isRendering ? 1 : 0 }}
+            transition={{ duration: isRendering ? 0.01 : 0.05, ease: "linear" }}
             className="absolute inset-0 flex items-center justify-center font-black pointer-events-none"
             style={{
               fontSize: `${lupinFontSize}px`,
@@ -91,9 +93,9 @@ export const LupinDisplay = ({
         {showFull && (
           <motion.div
             key="full-text"
-            initial={{ opacity: 0 }}
+            initial={{ opacity: isRendering ? 1 : 0 }}
             animate={{ opacity: 1 }}
-            transition={{ duration: 0.4 }}
+            transition={{ duration: isRendering ? 0.1 : 0.4 }}
             className="flex flex-col items-center justify-center w-full h-full"
             style={{ gap: `${fontSize * 0.2}px` }}
           >
