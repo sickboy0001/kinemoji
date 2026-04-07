@@ -83,19 +83,26 @@ export async function generateAndUploadGif(params: GifParameters) {
     await page.waitForSelector(".kinemoji-container");
 
     const frames: Buffer[] = [];
-    const fps = 20;
-    const duration = 3; // 3秒間キャプチャ
+    const fps = 10;
+    const duration = 2; // 2秒間キャプチャに短縮
     const totalFrames = fps * duration;
     const interval = 1000 / fps;
 
     // キャプチャループ
     for (let i = 0; i < totalFrames; i++) {
+      const start = Date.now();
       const screenshot = await page.screenshot({
         type: "png",
         clip: { x: 0, y: 0, width, height },
       });
       frames.push(screenshot);
-      await new Promise((resolve) => setTimeout(resolve, interval));
+
+      // キャプチャにかかった時間を考慮して待機時間を調整
+      const elapsed = Date.now() - start;
+      const wait = Math.max(0, interval - elapsed);
+      if (wait > 0) {
+        await new Promise((resolve) => setTimeout(resolve, wait));
+      }
     }
 
     // GIF生成
