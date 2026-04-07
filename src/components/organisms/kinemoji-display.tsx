@@ -1,11 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
-import { toPng } from "html-to-image";
-import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
-import { Save } from "lucide-react";
-import { uploadKinemojiImage } from "@/service/kinemoji-upload-service";
+import { useMemo, useRef } from "react";
 import {
   KinemojiDisplayProps,
   AnimationType,
@@ -22,40 +17,7 @@ export const KinemojiDisplay = ({
   isRendering = false,
 }: KinemojiDisplayProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [isSaving, setIsSaving] = useState(false);
   const lines = text.split(/\r?\n/);
-
-  const handleSaveImage = async () => {
-    if (!containerRef.current) return;
-
-    try {
-      setIsSaving(true);
-      const dataUrl = await toPng(containerRef.current, {
-        cacheBust: true,
-        backgroundColor: params.backColor || "#000000",
-      });
-
-      const formData = new FormData();
-      formData.append("image", dataUrl);
-      const result = await uploadKinemojiImage(formData);
-
-      if (result.success) {
-        toast.success("画像を保存しました", {
-          description: result.fileName,
-        });
-      } else {
-        toast.error("保存に失敗しました", {
-          description: result.error,
-        });
-      }
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Unknown error";
-      console.error("Save image error:", errorMessage);
-      toast.error("保存中にエラーが発生しました");
-    } finally {
-      setIsSaving(false);
-    }
-  };
 
   let params: any = {};
   if (typeof parameters === "string") {
@@ -119,17 +81,6 @@ export const KinemojiDisplay = ({
             isRendering={isRendering}
           />
         )}
-      </div>
-      <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
-        <Button
-          size="icon"
-          variant="secondary"
-          onClick={handleSaveImage}
-          disabled={isSaving}
-          title="画像として保存"
-        >
-          <Save className={`w-4 h-4 ${isSaving ? "animate-pulse" : ""}`} />
-        </Button>
       </div>
     </div>
   );
