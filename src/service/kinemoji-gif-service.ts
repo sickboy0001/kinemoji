@@ -95,15 +95,14 @@ export async function generateAndUploadGif(params: GifParameters) {
     const textLength = text.replace(/\n/g, "").length;
 
     const frames: { data: Buffer; delay: number }[] = [];
-    const fps = 10; // 15から10に落としてキャプチャ・エンコード時間を短縮
+    const fps = 8; // 10から8にさらに落として全体のフレーム数を抑制
     const interval = 1000 / fps;
 
     // アニメーションに合わせて時間を計算
-    // ルパンの場合: 文字数 * 0.3s + 1.5s
     // サーバーレスのタイムアウト(30s)を考慮し、最大時間を制限
     let duration = 3;
     if (isLupin) {
-      duration = Math.min(8, Math.max(3, textLength * 0.3 + 1.5));
+      duration = Math.min(6, Math.max(3, textLength * 0.3 + 1.5)); // 最大録画時間を6秒に制限
     }
 
     const totalFrames = Math.floor(fps * duration);
@@ -137,15 +136,22 @@ export async function generateAndUploadGif(params: GifParameters) {
     encoder.setRepeat(0);
     encoder.setQuality(10);
 
-    for (const frame of frames) {
-      const { data, info } = await sharp(frame.data)
-        .ensureAlpha()
-        .raw()
-        .toBuffer({ resolveWithObject: true });
+    // 並列で画像をデコード（CPUリソースを活用しつつ、メモリを抑えるため順次ではなく一括処理を試みる）
+    console.log(`Processing ${frames.length} frames with sharp...`);
+    const processedFrames = await Promise.all(
+      frames.map(async (frame) => {
+        const { data } = await sharp(frame.data)
+          .ensureAlpha()
+          .raw()
+          .toBuffer({ resolveWithObject: true });
+        return { data, delay: frame.delay };
+      }),
+    );
 
-      encoder.setDelay(frame.delay); // 各フレームの実際のキャプチャ間隔をセット
+    for (const frame of processedFrames) {
+      encoder.setDelay(frame.delay);
       // @ts-ignore
-      encoder.addFrame(data);
+      encoder.addFrame(frame.data);
     }
 
     encoder.finish();
