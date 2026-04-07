@@ -17,28 +17,45 @@ interface GifParameters {
 export async function generateAndUploadGif(params: GifParameters) {
   const { text, type, action, width, height, foreColor, backColor } = params;
 
-  // サーバーレス環境とローカル環境で起動設定を切り替える
-  const isServerless = !!(process.env.NETLIFY || process.env.VERCEL);
+  // サーバーレス環境（Netlify/Vercel）かどうかを判定
+  // ローカルWindows環境で誤検知されないよう、OSのチェックも追加
+  const isServerless =
+    !!(process.env.NETLIFY || process.env.VERCEL) &&
+    process.platform !== "win32";
 
   let browser;
   if (isServerless) {
-    browser = await chromium.launch({
-      args: chromiumServerless.args,
-      executablePath: await (chromiumServerless as any).executablePath(),
-      headless: true,
-    });
-  } else {
-    // ローカル環境（playwrightが必要な場合があるが、playwright-coreでもパスが通れば動く）
-    // もしローカルで動かない場合は、環境に合わせて調整が必要
+    console.log("Running in serverless mode, launching sparticuz-chromium...");
     try {
-      browser = await chromium.launch({ headless: true });
-    } catch (e) {
-      console.warn("Standard launch failed, trying with sparticuz path");
       browser = await chromium.launch({
         args: chromiumServerless.args,
-        executablePath: await (chromiumServerless as any).executablePath(),
+        executablePath: await chromiumServerless.executablePath(),
         headless: true,
       });
+    } catch (error) {
+      console.error("Serverless chromium launch failed:", error);
+      throw error;
+    }
+  } else {
+    // ローカル環境（Windows/Mac/Linux）
+    console.log("Running in local mode, launching standard chromium...");
+    try {
+      // ローカルでは環境パスにインストールされたブラウザを使用する
+      browser = await chromium.launch({ headless: true });
+    } catch (e) {
+      console.warn(
+        "Standard playwright-core launch failed, trying with dynamic import of 'playwright'...",
+        e,
+      );
+      try {
+        const playwright = await import("playwright");
+        browser = await playwright.chromium.launch({ headless: true });
+      } catch (e2) {
+        console.error("All local browser launch attempts failed:", e2);
+        throw new Error(
+          "Failed to launch browser. Please ensure playwright is installed (npx playwright install chromium)",
+        );
+      }
     }
   }
 
