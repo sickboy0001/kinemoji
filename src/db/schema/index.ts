@@ -50,6 +50,12 @@ export const kinemojis = sqliteTable("kinemoji", {
   text: text("text").notNull(),
   parameters: text("parameters"), // JSON 保存用
   imageUrl: text("image_url"),
+  status: text("gif_status", {
+    enum: ["pending", "processing", "completed", "failed"],
+  }).default("pending"),
+  progress: integer("gif_progress").default(0),
+  error: text("gif_error"),
   creatorId: text("creator_id"),
   createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+  updatedAt: integer("updated_at", { mode: "timestamp_ms" }),
 });

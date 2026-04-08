@@ -91,6 +91,14 @@ npx drizzle-kit push
 
 ---
 
+## **TODO**
+
+- [ ] スタート画面見直し
+- [ ] backgroundfunctionの利用
+- [ ] Xポストの連携
+
+---
+
 ## **📜 History**
 - **2026-04-08**
   - [deploy](https://kinemoji.netlify.app/)

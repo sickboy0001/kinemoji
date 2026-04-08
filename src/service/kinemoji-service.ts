@@ -37,6 +37,7 @@ export const kinemojiService = {
   ) {
     const id = crypto.randomUUID();
     const shortId = nanoid(10);
+    const now = new Date();
     const result = await db
       .insert(kinemojis)
       .values({
@@ -46,7 +47,10 @@ export const kinemojiService = {
         parameters: parameters ? JSON.stringify(parameters) : null,
         imageUrl,
         creatorId,
-        createdAt: new Date(),
+        createdAt: now,
+        updatedAt: now,
+        status: "pending",
+        progress: 0,
       })
       .returning();
     return result[0];
