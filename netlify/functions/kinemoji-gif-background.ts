@@ -85,10 +85,9 @@ export const handler: Handler = async (event) => {
       });
 
       // GIF 生成
-      const encoder = new (await import("gif-encoder-2")).default(
-        width,
-        height,
-      );
+      const encoder = new (
+        await import("../../src/lib/gif-encoder-2/GIFEncoder")
+      ).default(width, height);
       encoder.start();
       encoder.setRepeat(0);
       encoder.setDelay(type === "animation" ? 100 : 0);

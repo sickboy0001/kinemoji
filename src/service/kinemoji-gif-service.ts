@@ -1,6 +1,6 @@
 import puppeteer, { Browser, Page } from "puppeteer-core";
 import chromium from "@sparticuz/chromium";
-import GIFEncoder from "gif-encoder-2";
+import GIFEncoder from "@/lib/gif-encoder-2/GIFEncoder";
 import sharp from "sharp";
 import { uploadKinemojiImage } from "./kinemoji-upload-service";
 
@@ -91,7 +91,7 @@ export async function generateAndUploadGif(params: GifParameters) {
     let finalBuffer = gifBuffer;
     if (gifBuffer.length > 2 * 1024 * 1024) {
       console.log("Compressing GIF...");
-      finalBuffer = await sharp(gifBuffer)
+      finalBuffer = await sharp(gifBuffer as any)
         .resize({ width: Math.min(width, 800), fit: "inside" })
         .toFormat("gif")
         .toBuffer();
