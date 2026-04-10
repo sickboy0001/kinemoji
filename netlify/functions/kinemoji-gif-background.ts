@@ -56,9 +56,10 @@ export const handler: Handler = async (event) => {
       console.log("[Background Function] Generating GIF...");
 
       // @sparticuz/chromium-min の設定
-      // /tmp ディレクトリに Chromium バイナリをダウンロード・展開させる
-      const tmpDir = "/tmp";
-      const execPath = await chromium.executablePath(tmpDir);
+      // 明示的な URL を指定して Chromium バイナリをダウンロード
+      const chromiumUrl =
+        "https://github.com/Sparticuz/chromium/releases/download/v122.0.0/chromium-v122.0.0-pack.tar";
+      const execPath = await chromium.executablePath(chromiumUrl);
       console.log("Executable path:", execPath);
 
       browser = await puppeteer.launch({
