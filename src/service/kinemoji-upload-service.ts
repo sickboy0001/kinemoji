@@ -1,7 +1,6 @@
 "use server";
 
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
-import { customAlphabet } from "nanoid";
 
 const s3Client = new S3Client({
   region: "auto",
@@ -12,7 +11,15 @@ const s3Client = new S3Client({
   },
 });
 
-const nanoid = customAlphabet("0123456789abcdefghijklmnopqrstuvwxyz", 7);
+// nanoid の代わりに標準的なランダム文字列生成を使用（ES Module 問題の回避）
+function generateRandomId(length: number): string {
+  const chars = "0123456789abcdefghijklmnopqrstuvwxyz";
+  let result = "";
+  for (let i = 0; i < length; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+}
 
 export async function uploadKinemojiImage(formData: FormData) {
   try {
@@ -30,7 +37,7 @@ export async function uploadKinemojiImage(formData: FormData) {
     const isGif = base64Data.startsWith("data:image/gif");
     const extension = isGif ? "gif" : "png";
     const contentType = isGif ? "image/gif" : "image/png";
-    const fileName = `${timestamp}-${nanoid()}.${extension}`;
+    const fileName = `${timestamp}-${generateRandomId(7)}.gif`;
 
     const command = new PutObjectCommand({
       Bucket: process.env.R2_BUCKET_NAME!,
