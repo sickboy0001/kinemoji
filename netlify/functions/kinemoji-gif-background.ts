@@ -1,40 +1,7 @@
 import { Handler } from "@netlify/functions";
-import { generateAndUploadGif } from "../../src/service/kinemoji-gif-service";
 import { db } from "../../src/lib/turso/db";
 import { kinemojis } from "../../src/db/schema";
 import { eq } from "drizzle-orm";
-
-// Playwright が package.json を見つけられるようにパッチ
-// Netlify Functions 環境では require.resolve が正しく機能しないため
-// @ts-ignore - require は Node.js 環境でのみ利用可能
-if (typeof require !== "undefined") {
-  try {
-    // package.json のパスを解決するためのワークアラウンド
-    const path = require("path");
-    // @ts-ignore - require.resolve の型をオーバーライド
-    const originalResolve = require.resolve;
-    // @ts-ignore
-    require.resolve = function (
-      request: string,
-      options?: { paths?: string[] | undefined },
-    ) {
-      try {
-        return originalResolve.call(this, request, options);
-      } catch (error: any) {
-        if (
-          request === "../../../package.json" ||
-          request.includes("package.json")
-        ) {
-          // package.json が見つからない場合は、現在のディレクトリの package.json を返す
-          return path.join(process.cwd(), "package.json");
-        }
-        throw error;
-      }
-    };
-  } catch (e) {
-    // require が利用できない場合はスキップ
-  }
-}
 
 /**
  * Background Function for GIF generation
@@ -87,6 +54,39 @@ export const handler: Handler = async (event) => {
   console.log(`[Background Function] Starting GIF generation for id: ${id}`);
 
   try {
+    // Playwright が package.json を見つけられるようにパッチを適用
+    // @ts-ignore - require は Node.js 環境でのみ利用可能
+    if (typeof require !== "undefined") {
+      try {
+        const path = require("path");
+        // @ts-ignore
+        const originalResolve = require.resolve;
+        // @ts-ignore
+        require.resolve = function (
+          request: string,
+          options?: { paths?: string[] | undefined },
+        ) {
+          try {
+            return originalResolve.call(this, request, options);
+          } catch (error: any) {
+            if (
+              request === "../../../package.json" ||
+              request.includes("package.json")
+            ) {
+              return path.join(process.cwd(), "package.json");
+            }
+            throw error;
+          }
+        };
+      } catch (e) {
+        // require が利用できない場合はスキップ
+      }
+    }
+
+    // 動的インポートで Playwright を読み込む
+    const { generateAndUploadGif } =
+      await import("../../src/service/kinemoji-gif-service");
+
     // GIF 生成処理（最大 15 分まで実行可能）
     console.log(`[Background Function] Generating GIF...`);
     const result = await generateAndUploadGif({
