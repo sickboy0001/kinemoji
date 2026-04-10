@@ -2,15 +2,8 @@ import { chromium } from "playwright-core";
 import GIFEncoder from "gif-encoder-2";
 import sharp from "sharp";
 import { uploadKinemojiImage } from "./kinemoji-upload-service";
-import * as os from "os";
 import * as path from "path";
-
-// Playwright ブラウザのパスを設定（Netlify 環境用）
-// ビルド時にインストールされたブラウザの場所を指定
-const playwrightBrowsersPath =
-  process.env.PLAYWRIGHT_BROWSERS_PATH ||
-  path.join(os.homedir(), ".cache", "ms-playwright");
-process.env.PLAYWRIGHT_BROWSERS_PATH = playwrightBrowsersPath;
+import chromiumServerless from "@sparticuz/chromium";
 
 interface GifParameters {
   text: string;
@@ -33,13 +26,20 @@ export async function generateAndUploadGif(params: GifParameters) {
 
   let browser;
   if (isServerless) {
-    console.log("Running in serverless mode, launching playwright chromium...");
+    console.log("Running in serverless mode, launching sparticuz-chromium...");
     try {
-      // Netlify 環境では playwright の chromium を直接使用
-      // ビルド時に `npx playwright install chromium` でインストールされたブラウザを使用
+      // Netlify 環境では @sparticuz/chromium を使用
+      // サーバーレス環境向けに最適化された Chromium の実行パスを取得
+      const executablePath = await chromiumServerless.executablePath();
+      console.log("Chromium executable path:", executablePath);
+
+      // Playwright で指定された実行パスの Chromium を起動
+      // @sparticuz/chromium の args プロパティは配列を返す
       browser = await chromium.launch({
+        executablePath,
         headless: true,
         args: [
+          ...chromiumServerless.args,
           "--no-sandbox",
           "--disable-setuid-sandbox",
           "--disable-dev-shm-usage",
@@ -48,6 +48,8 @@ export async function generateAndUploadGif(params: GifParameters) {
           "--no-zygote",
           "--single-process",
           "--disable-gpu",
+          "--font-render-hinting=none",
+          "--disable-blink-features=FontRendering",
         ],
       });
     } catch (error) {
@@ -84,114 +86,66 @@ export async function generateAndUploadGif(params: GifParameters) {
     // レンダリング用の URL（開発環境または本番環境のベース URL が必要）
     // ここでは、特殊なレンダリング用ページ /kinemoji/render を想定
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-    const queryParams = new URLSearchParams({
+    const renderUrl = `${baseUrl}/kinemoji/render?text=${encodeURIComponent(
       text,
-      type,
-      action,
-      width: width.toString(),
-      height: height.toString(),
-      foreColor,
-      backColor,
-      render: "true",
-    });
+    )}&type=${type}&action=${action}&width=${width}&height=${height}&foreColor=${foreColor}&backColor=${backColor}`;
 
-    const normalizedBaseUrl = baseUrl.replace(/\/$/, "");
-    const renderUrl = `${normalizedBaseUrl}/kinemoji/render?${queryParams.toString()}`;
-
-    console.log(`Navigating to: ${renderUrl}`);
+    console.log("Navigating to:", renderUrl);
     await page.goto(renderUrl, {
-      waitUntil: "networkidle", // ネットワークが落ち着くまで待機
-      timeout: 20000, // 10 秒→20 秒に増加（文字数が多い場合の描画時間確保）
+      waitUntil: "networkidle",
+      timeout: 30000,
     });
-
-    console.log("Waiting for .kinemoji-container...");
-    // コンポーネントの読み込み待ち（タイムアウトを短くして原因を切り分け）
-    await page.waitForSelector(".kinemoji-container", { timeout: 5000 });
-    console.log(".kinemoji-container found, starting capture...");
-
-    const isLupin = type === "lupin";
-    const textLength = text.replace(/\n/g, "").length;
-
-    const frames: { data: Buffer; delay: number }[] = [];
-    const fps = 10; // 8 から 10 に引き上げ、滑らかさを向上
-    const interval = 1000 / fps;
-
-    // アニメーションに合わせて時間を計算
-    // サーバーレスのタイムアウト (30s) を考慮し、最大時間を制限
-    let duration = 3;
-    if (isLupin) {
-      // Lupin: 文字数に応じて 3-10 秒
-      duration = Math.min(10, Math.max(3, textLength * 0.5 + 2));
-    } else {
-      // 他：文字数に応じて 3-6 秒
-      duration = Math.min(6, Math.max(3, textLength * 0.3 + 1.5));
-    }
-
-    const totalFrames = Math.floor(fps * duration);
-    console.log(
-      `Starting capture: fps=${fps}, duration=${duration}, totalFrames=${totalFrames}`,
-    );
-
-    // キャプチャループ
-    for (let i = 0; i < totalFrames; i++) {
-      const frameStart = Date.now();
-      const screenshot = await page.screenshot({
-        type: "jpeg",
-        quality: 85, // 60 から 85 に引き上げ、画質を向上
-        clip: { x: 0, y: 0, width, height },
-      });
-
-      const elapsed = Date.now() - frameStart;
-      const wait = Math.max(0, interval - elapsed);
-      if (wait > 0) {
-        await new Promise((resolve) => setTimeout(resolve, wait));
-      }
-
-      // 次のフレームまでの実際の経過時間を計算
-      const actualDelay = Date.now() - frameStart;
-      frames.push({ data: screenshot, delay: actualDelay });
-    }
 
     // GIF 生成
     const encoder = new GIFEncoder(width, height);
-    encoder.start();
-    encoder.setRepeat(0);
-    encoder.setQuality(5); // 10→5 に減少（色数を増やす、1-10 の範囲で 5 が推奨）
+    const chunks: Buffer[] = [];
 
-    // 並列で画像をデコード（CPU リソースを活用しつつ、メモリを抑えるため順次ではなく一括処理を試みる）
-    console.log(`Processing ${frames.length} frames with sharp...`);
-    const processedFrames = await Promise.all(
-      frames.map(async (frame) => {
-        const { data } = await sharp(frame.data)
-          .ensureAlpha()
-          .raw()
-          .toBuffer({ resolveWithObject: true });
-        return { data, delay: frame.delay };
-      }),
-    );
+    // フレームをキャプチャ（アニメーションの場合は複数回）
+    const frameCount = type === "animation" ? 30 : 1;
+    const frameDelay = type === "animation" ? 100 : 0;
 
-    for (const frame of processedFrames) {
-      encoder.setDelay(frame.delay);
-      // @ts-ignore
-      encoder.addFrame(frame.data);
+    for (let i = 0; i < frameCount; i++) {
+      if (type === "animation") {
+        // アニメーションの場合は少し待機
+        await new Promise((resolve) => setTimeout(resolve, frameDelay));
+      }
+
+      const screenshot = await page.screenshot({
+        type: "png",
+        fullPage: false,
+      });
+      encoder.addFrame(screenshot);
     }
 
     encoder.finish();
-    const gifBuffer = encoder.out.getData();
+    let gifBuffer = encoder.out.getData();
 
-    // デバッグログ
-    console.log("GIF Generated, size:", gifBuffer.length);
+    // 画像を圧縮（オプション）
+    if (gifBuffer.length > 2 * 1024 * 1024) {
+      console.log("Compressing GIF...");
+      gifBuffer = await sharp(gifBuffer)
+        .resize({ width: Math.min(width, 800), fit: "inside" })
+        .toFormat("gif")
+        .toBuffer();
+    }
 
-    // FormData を作成してアップロードサービスを呼び出す
+    // R2 にアップロード
     const formData = new FormData();
-    const base64Gif = `data:image/gif;base64,${gifBuffer.toString("base64")}`;
-    formData.append("image", base64Gif);
+    const blob = new Blob([gifBuffer.buffer as ArrayBuffer], {
+      type: "image/gif",
+    });
+    formData.append("file", blob, "output.gif");
 
     const result = await uploadKinemojiImage(formData);
-    return result;
-  } catch (error) {
-    console.error("GIF generation error detail:", error);
-    throw error;
+
+    if (!result.success) {
+      throw new Error(result.error || "Failed to upload GIF");
+    }
+
+    return {
+      success: true,
+      url: result.url,
+    };
   } finally {
     await browser.close();
   }

@@ -7,16 +7,13 @@ publish = ".next"
 NODE_VERSION = "20"
 # Playwright/Chromium/Sharp を使用するため、Edge Runtime は無効にする必要があります
 NEXT_USE_NETLIFY_EDGE = "false"
-# Playwright ブラウザのインストールパスを指定
-PLAYWRIGHT_BROWSERS_PATH = "/tmp/playwright-browsers"
 
 [[plugins]]
 package = "@netlify/plugin-nextjs"
 
-[functions."*"]
-# サーバーレス関数の設定（GIF 生成などでタイムアウトしやすいため）
+[functions]
+# サーバーレス関数のデフォルト設定
 included_files = ["node_modules/playwright-core/**", "node_modules/@sparticuz/chromium/**"]
-# サーバーレス関数のタイムアウト時間を延ばす（最大 60 秒、デフォルト 10 秒）
 timeout = 60
 
 # Background Functions 設定
@@ -26,4 +23,4 @@ background = true
 # 最大 15 分（900 秒）まで実行可能
 timeout = 900
 # 必要なファイルを含める
-included_files = ["node_modules/playwright-core/**", "node_modules/@sparticuz/chromium/**", "node_modules/@libsql/**", "node_modules/drizzle-orm/**", "/tmp/playwright-browsers/**"]
+included_files = ["node_modules/playwright-core/**", "node_modules/@sparticuz/chromium/**", "node_modules/@libsql/**", "node_modules/drizzle-orm/**"]
