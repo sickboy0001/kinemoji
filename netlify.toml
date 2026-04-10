@@ -14,7 +14,6 @@ package = "@netlify/plugin-nextjs"
 [functions]
 # サーバーレス関数のデフォルト設定
 included_files = ["node_modules/playwright-core/**", "node_modules/@sparticuz/chromium/**"]
-timeout = 60
 
 # Background Functions 設定
 [functions.kinemoji-gif-background]
