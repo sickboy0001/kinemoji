@@ -1,6 +1,6 @@
 import { Handler } from "@netlify/functions";
 import puppeteer from "puppeteer-core";
-import chromium from "@sparticuz/chromium-min";
+import chromium from "@sparticuz/chromium";
 import { db } from "../../src/lib/turso/db";
 import { kinemojis } from "../../src/db/schema";
 import { eq } from "drizzle-orm";
