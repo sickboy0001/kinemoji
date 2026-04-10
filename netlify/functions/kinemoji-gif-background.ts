@@ -130,8 +130,7 @@ export const handler: Handler = async (event) => {
       };
     } else {
       // エラー処理（failed）
-      const errorMessage =
-        result.error || "Unknown error during GIF generation";
+      const errorMessage = "Unknown error during GIF generation";
       console.error(
         `[Background Function] GIF generation failed: ${errorMessage}`,
       );

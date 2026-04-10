@@ -26,11 +26,7 @@ export async function POST(req: Request) {
     const params = await req.json();
     const result = await generateAndUploadGif(params);
 
-    if (result.success) {
-      return NextResponse.json(result);
-    } else {
-      return NextResponse.json({ error: result.error }, { status: 500 });
-    }
+    return NextResponse.json(result);
   } catch (error) {
     console.error("GIF generation API error:", error);
     return NextResponse.json(
