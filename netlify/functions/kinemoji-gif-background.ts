@@ -4,6 +4,38 @@ import { db } from "../../src/lib/turso/db";
 import { kinemojis } from "../../src/db/schema";
 import { eq } from "drizzle-orm";
 
+// Playwright が package.json を見つけられるようにパッチ
+// Netlify Functions 環境では require.resolve が正しく機能しないため
+// @ts-ignore - require は Node.js 環境でのみ利用可能
+if (typeof require !== "undefined") {
+  try {
+    // package.json のパスを解決するためのワークアラウンド
+    const path = require("path");
+    // @ts-ignore - require.resolve の型をオーバーライド
+    const originalResolve = require.resolve;
+    // @ts-ignore
+    require.resolve = function (
+      request: string,
+      options?: { paths?: string[] | undefined },
+    ) {
+      try {
+        return originalResolve.call(this, request, options);
+      } catch (error: any) {
+        if (
+          request === "../../../package.json" ||
+          request.includes("package.json")
+        ) {
+          // package.json が見つからない場合は、現在のディレクトリの package.json を返す
+          return path.join(process.cwd(), "package.json");
+        }
+        throw error;
+      }
+    };
+  } catch (e) {
+    // require が利用できない場合はスキップ
+  }
+}
+
 /**
  * Background Function for GIF generation
  * 最大 15 分まで実行可能（Netlify Background Functions）
