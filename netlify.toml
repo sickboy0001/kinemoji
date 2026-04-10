@@ -3,23 +3,16 @@ command = "npm run build"
 publish = ".next"
 
 [build.environment]
-# Netlify でのビルド時に使用する Node.js のバージョンを指定
 NODE_VERSION = "20"
-# Playwright/Chromium/Sharp を使用するため、Edge Runtime は無効にする必要があります
 NEXT_USE_NETLIFY_EDGE = "false"
 
 [[plugins]]
 package = "@netlify/plugin-nextjs"
 
 [functions]
-# サーバーレス関数のデフォルト設定
-included_files = ["node_modules/playwright-core/**", "node_modules/@sparticuz/chromium/**"]
+included_files = ["node_modules/@sparticuz/chromium-min/**"]
 
-# Background Functions 設定
 [functions.kinemoji-gif-background]
-# Background Function として登録
 background = true
-# 最大 15 分（900 秒）まで実行可能
 timeout = 900
-# 必要なファイルを含める
-included_files = ["node_modules/playwright-core/**", "node_modules/@sparticuz/chromium/**", "node_modules/@libsql/**", "node_modules/drizzle-orm/**"]
+included_files = ["node_modules/@sparticuz/chromium-min/**", "node_modules/@libsql/**", "node_modules/drizzle-orm/**"]
