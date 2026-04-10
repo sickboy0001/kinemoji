@@ -10,9 +10,11 @@ NEXT_USE_NETLIFY_EDGE = "false"
 package = "@netlify/plugin-nextjs"
 
 [functions]
-included_files = ["node_modules/@sparticuz/chromium/**"]
+node_bundle = true
+external_node_modules = ["@sparticuz/chromium-min"]
+included_files = ["node_modules/@sparticuz/chromium-min/**"]
 
 [functions.kinemoji-gif-background]
 background = true
 timeout = 900
-included_files = ["node_modules/@sparticuz/chromium/**", "node_modules/@libsql/**", "node_modules/drizzle-orm/**"]
+included_files = ["node_modules/@sparticuz/chromium-min/**", "node_modules/@libsql/**", "node_modules/drizzle-orm/**"]

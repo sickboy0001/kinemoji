@@ -1,8 +1,6 @@
 import { Handler } from "@netlify/functions";
 import puppeteer from "puppeteer-core";
-import chromium from "@sparticuz/chromium";
-import * as path from "path";
-import * as os from "os";
+import chromium from "@sparticuz/chromium-min";
 import { db } from "../../src/lib/turso/db";
 import { kinemojis } from "../../src/db/schema";
 import { eq } from "drizzle-orm";
@@ -57,29 +55,18 @@ export const handler: Handler = async (event) => {
     try {
       console.log("[Background Function] Generating GIF...");
 
-      // Chromium の実行パスを明示的に設定
-      // Netlify 環境では /tmp にダウンロードされる
-      const chromiumPath = process.env.CHROMIUM_PATH || "/tmp/chromium";
-      console.log("Chromium path:", chromiumPath);
+      // @sparticuz/chromium-min の設定
+      // /tmp ディレクトリに Chromium バイナリをダウンロード・展開させる
+      const tmpDir = "/tmp";
+      const execPath = await chromium.executablePath(tmpDir);
+      console.log("Executable path:", execPath);
 
-      // @sparticuz/chromium の設定
-      const launchOptions: any = {
+      browser = await puppeteer.launch({
         args: chromium.args,
         defaultViewport: chromium.defaultViewport,
+        executablePath: execPath,
         headless: true,
-      };
-
-      // executablePath を設定（存在する場合は）
-      try {
-        const execPath = await chromium.executablePath();
-        console.log("Executable path from chromium:", execPath);
-        launchOptions.executablePath = execPath;
-      } catch (e) {
-        console.log("Using fallback chromium path");
-        launchOptions.executablePath = chromiumPath;
-      }
-
-      browser = await puppeteer.launch(launchOptions);
+      });
 
       const page = await browser.newPage();
       await page.setViewport({ width, height });
