@@ -1,117 +1,165 @@
-# **📘 Kinemoji (キネ文字)**
+# 📘 Kinemoji (キネ文字)
 
 ブラウザ上でリアルタイムに動かす「インタラクティブな文字演出」を生成・共有するプラットフォームです。
 
-## **🚀 特徴**
+## 🚀 特徴
+
 - **多彩なアニメーション**: ルパン三世風、フェード、ズームなど、Framer Motion を活用した高品質な演出。
-- **GIF保存機能**: ブラウザ上のアニメーションをサーバーサイド（Playwright）でレンダリングし、GIFとして保存・共有可能。
+- **GIF 保存機能**: ブラウザ上のアニメーションをサーバーサイド（Playwright）でレンダリングし、GIF として保存・共有可能。
 - **マルチデバイス対応**: レスポンシブデザインにより、PC・スマホどちらからでも作成・閲覧が可能。
-- **認証システム**: Google 認証およびメール・パスワード認証に対応。
+- **X (Twitter) 投稿**: 生成したキネ文字を X に直接投稿可能。OGP 対応でリッチなプレビューカードを表示。
+- **GA4 統合**: ユーザー行動分析に対応。
 
----
+## 🛠️ 技術スタック
 
-## **🛠️ 実装済み・再利用可能な機能リスト**
+| カテゴリ | 技術 |
+|----------|------|
+| フレームワーク | Next.js 15 (App Router) |
+| UI ライブラリ | React 19, Framer Motion, shadcn/ui |
+| データベース | Turso (libSQL) + Drizzle ORM |
+| GIF 生成 | Playwright + chromium (サーバーサイド) |
+| 画像処理 | Sharp |
+| 認証 | Auth.js (NextAuth) - 現在は無効化 |
+| 分析 | GA4 (Google Analytics 4) |
+| デプロイ | Netlify |
 
-### **1. アニメーションエンジン**
-- **LupinDisplay**: ルパン三世のタイトルのように、一文字ずつ表示した後に全文が表示される演出。
-- **StandardDisplay**: 方向（上下左右）、ズーム、フェードなどの標準的なテキストアニメーション。
-- **レンダリング最適化**: GIF生成時にはアニメーションのタイミングや透明度を自動調整し、静止画キャプチャ漏れを防止。
+## 🏁 クイックスタート
 
-### **2. GIF生成・画像処理**
-- **Serverless Chromium**: `playwright-core` と `@sparticuz/chromium` を使用し、Netlify などのサーバーレス環境でブラウザを起動。
-- **GIF Encoding**: `gif-encoder-2` による高速なGIF生成。
-- **Sharp 連携**: 画像のリサイズ、透過処理、バッファ操作。
-- **Dynamic Duration**: テキストの長さに応じて録画時間を自動調整。
+### 前提条件
 
-### **3. データ・バックエンド**
-- **Turso (SQLite)**: エッジ環境に最適化されたデータベース。
-- **Drizzle ORM**: 型安全なデータベース操作。
-- **認証 (Auth.js)**: Google OAuth および Credentials プロバイダー。
-- **ストレージ連携**: 生成されたGIFを外部ストレージにアップロードするサービス層。
+- Node.js 18 以上
+- npm または pnpm
 
-### **4. UI/UX (shadcn/ui ベース)**
-- **共通コンポーネント**: Button, Card, Dialog, Drawer, Input, Label, Sheet, Sonner (Toast) 等。
-- **デザイン**: 濃色を基調としたモダンなUI。
+### インストール
 
----
-
-## **📂 ディレクトリ構造**
-```
-src/
-├── app/                       # Next.js App Router (各ページの定義)
-│   ├── (auth)/               # 認証グループ（ログイン、サインアップ、パスワードリセット）
-│   ├── (user)/               # ユーザー固有機能（プロフィール等）
-│   ├── admini/               # 管理者用ダッシュボード、統計表示
-│   ├── api/                  # APIルート
-│   │   ├── auth/             # 認証API（検証、パスワードリセット）
-│   │   ├── kinemoji/gif/      # 【重要】サーバーサイドGIF生成エンドポイント
-│   │   └── posts/            # 投稿データ操作
-│   ├── kinemoji/             # Kinemoji メイン機能
-│   │   ├── [id]/             # 個別表示ページ
-│   │   ├── list/             # 投稿一覧ページ
-│   │   ├── new/              # 新規作成フォーム
-│   │   └── render/           # 【重要】GIF生成用のクリーンな描画ページ
-│   └── layout.tsx            # 全体レイアウト、フォント・メタデータ設定
-├── components/
-│   ├── atomic/               # 原子レベルのUIコンポーネント
-│   ├── organisms/            # 複合コンポーネント（表示ロジック含む）
-│   │   └── kinemoji/         # アニメーション実装（LupinDisplay, StandardDisplay）
-│   ├── pages/                # 各 page.tsx から呼び出される画面全体の実装
-│   └── ui/                   # shadcn/ui (汎用コンポーネント群)
-├── service/                   # 【心臓部】ビジネスロジック層
-│   ├── kinemoji-service.ts        # DB操作（CRUD）
-│   ├── kinemoji-gif-service.ts    # PlaywrightによるGIF生成エンジンの核心
-│   └── kinemoji-upload-service.ts # 画像アップロード・ファイル管理
-├── db/                        # データベース関連
-│   └── schema/               # Drizzle ORM スキーマ定義
-├── lib/                       # 共通ライブラリ・ユーティリティ
-│   ├── turso/                # Turso (libSQL) クライアント初期化
-│   └── utils/                # 共通ユーティリティ関数
-├── types/                     # TypeScript 型定義ファイル群
-├── auth.ts                    # NextAuth (Auth.js) 設定・プロバイダー定義
-└── middleware.ts              # ルーティング保護、認証ミドルウェア
-```
-
----
-
-## **🏁 クイックスタート**
-
-### 開発サーバーの起動:
 ```bash
+# クローン
+git clone <repository-url>
+cd kinemoji
+
+# 依存関係のインストール
 npm install
-npm run dev
 ```
-[http://localhost:3000](http://localhost:3000) で確認できます。
 
-### データベースセットアップ:
-`.env` ファイルに `TURSO_DATABASE_URL` と `TURSO_AUTH_TOKEN` を設定し、
+### 環境変数の設定
+
+`.env` ファイルを作成し、以下の環境変数を設定してください。
+
+```env
+TURSO_DATABASE_URL=<turso-database-url>
+TURSO_AUTH_TOKEN=<turso-auth-token>
+```
+
+### データベースセットアップ
+
 ```bash
+# スキーマをデータベースに適用
 npx drizzle-kit push
 ```
 
----
+### 開発サーバーの起動
 
-## **TODO**
+```bash
+npm run dev
+```
 
-- [ ] スタート画面見直し
-- [ ] backgroundfunctionの利用
-- [ ] Xポストの連携
+[http://localhost:3000](http://localhost:3000) でアクセスできます。
 
----
+## 📖 使用方法
 
-## **📜 History**
-- **2026-04-08**
-  - [deploy](https://kinemoji.netlify.app/)
-  - Lupin アニメーションの GIF 生成時における表示タイミングと速度の精度向上。
-  - 動的な GIF 録画時間の導入。
-  - サーバーレス環境でのタイムアウト対策（8 FPSへの調整、並列画像処理の導入、最大録画時間の制限）。
-  - 20文字（日本語）まで可能なのは確認済み、画像出力が落ち着かない模様
+### 1. キネ文字の作成
 
----
+1. トップページから「新規作成」を選択
+2. 表示したいテキストを入力
+3. アニメーション設定を調整
+4. 「プレビュー」で確認
 
-## **Learn More**
+### 2. GIF の生成
+
+1. 作成画面で「GIF 生成」ボタンをクリック
+2. 処理が完了するまで待機（進捗が表示されます）
+3. 完了後、GIF をダウンロードまたは共有
+
+### 3. X (Twitter) への投稿
+
+1. 生成されたキネ文字の「X に投稿」ボタンをクリック
+2. 新規タブで X の投稿画面が開く
+3. 内容を確認して投稿
+
+## 📂 ディレクトリ構造
+
+```
+src/
+├── app/                          # Next.js App Router
+│   ├── layout.tsx                # 全体レイアウト
+│   ├── page.tsx                  # ホームページ
+│   ├── api/                      # API ルート
+│   │   ├── kinemoji/gif/         # GIF 生成エンドポイント
+│   │   └── posts/                # 投稿管理
+│   └── kinemoji/                 # メイン機能
+│       ├── [id]/                 # 詳細ページ
+│       ├── list/                 # 一覧ページ
+│       ├── new/                  # 新規作成
+│       └── render/               # GIF 描画用
+├── components/                   # React コンポーネント
+│   ├── layout/                   # レイアウトコンポーネント
+│   ├── organisms/                # 複合コンポーネント
+│   ├── pages/                    # ページロジックコンポーネント
+│   └── ui/                       # shadcn/ui
+├── service/                      # ビジネスロジック層
+├── db/                           # データベース
+│   └── schema/                   # Drizzle スキーマ定義
+└── lib/                          # 共通ライブラリ
+```
+
+詳細な構造については [`DESIGN.md`](DESIGN.md) を参照してください。
+
+## 🧪 テスト
+
+```bash
+# ユニットテスト
+npm run test
+
+# E2E テスト
+npm run test:e2e
+```
+
+## 🤝 コントリビューション
+
+コントリビューションを歓迎します！以下の手順に従ってください。
+
+1. リポジトリをフォーク
+2. 機能ブランチを作成 (`git checkout -b feature/amazing-feature`)
+3. 変更をコミット (`git commit -m 'Add some amazing feature'`)
+4. ブランチにプッシュ (`git push origin feature/amazing-feature`)
+5. プルリクエストを開く
+
+## 📜 変更履歴
+
+| 日付 | 変更内容 |
+|------|----------|
+| 2026-04-09 | GA4 対応、テーブル調整、X 投稿 OGP 対応 |
+| 2026-04-08 | Lupin アニメーションの GIF 生成精度向上、動的録画時間導入 |
+
+## 📝 TODO
+
+- [ ] スタート画面の再設計
+- [ ] 背景機能の完全実装（ポーリング、WebSocket 対応）
+- [ ] 認証機能の有効化
+- [ ] パフォーマンス最適化（画像キャッシュ、CDN 統合）
+
+## 📚 参考リンク
 
 - [Next.js Documentation](https://nextjs.org/docs)
 - [Framer Motion](https://www.framer.com/motion/)
 - [Turso DB](https://turso.tech/)
-- [netlify](https://app.netlify.com/)
+- [Drizzle ORM](https://orm.drizzle.team/)
+- [shadcn/ui](https://ui.shadcn.com/)
+
+## 📄 ライセンス
+
+このプロジェクトは MIT ライセンスの下でライセンスされています。
+
+---
+
+**デプロイ先**: [https://kinemoji.netlify.app](https://kinemoji.netlify.app)

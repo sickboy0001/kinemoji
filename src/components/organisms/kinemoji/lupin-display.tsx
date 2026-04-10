@@ -96,12 +96,13 @@ export const LupinDisplay = ({
             animate={{ opacity: 1 }}
             exit={{ opacity: isRendering ? 1 : 0 }}
             transition={{ duration: isRendering ? 0.01 : 0.05, ease: "linear" }}
-            className="absolute inset-0 flex items-center justify-center font-black pointer-events-none"
+            className="absolute inset-0 flex items-center justify-center pointer-events-none"
             style={{
               fontSize: `${lupinFontSize}px`,
               color: foreColor,
               lineHeight: 1,
-              fontFamily: "var(--font-noto-serif-jp)",
+              fontFamily: "var(--font-zen-old-mincho)",
+              fontWeight: 300,
             }}
           >
             {allChars[highlightIndex]}
@@ -129,12 +130,13 @@ export const LupinDisplay = ({
                 {line.split("").map((char, charIndex) => (
                   <span
                     key={`${lineIndex}-${charIndex}`}
-                    className="font-bold leading-none"
+                    className="leading-none"
                     style={{
                       fontSize: `${fontSize}px`,
                       color: foreColor,
                       textShadow: `${fontSize * 0.05}px ${fontSize * 0.05}px ${fontSize * 0.1}px rgba(0,0,0,0.2)`,
-                      fontFamily: "var(--font-noto-serif-jp)",
+                      fontFamily: "var(--font-zen-old-mincho)",
+                      fontWeight: 300,
                     }}
                   >
                     {char}

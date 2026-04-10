@@ -16,3 +16,12 @@
   included_files = ["node_modules/playwright-core/**", "node_modules/@sparticuz/chromium/**"]
   # サーバーレス関数のタイムアウト時間を延ばす（最大60秒、デフォルト10秒）
   timeout = 60
+  
+  # Background Functions 設定
+  [functions.kinemoji-gif-background]
+  # Background Function として登録
+  background = true
+  # 最大 15 分（900 秒）まで実行可能
+  timeout = 900
+  # 必要なファイルを含める
+  included_files = ["node_modules/playwright-core/**", "node_modules/@sparticuz/chromium/**", "node_modules/@libsql/**", "node_modules/drizzle-orm/**"]

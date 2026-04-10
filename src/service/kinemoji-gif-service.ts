@@ -18,7 +18,7 @@ export async function generateAndUploadGif(params: GifParameters) {
   const { text, type, action, width, height, foreColor, backColor } = params;
 
   // サーバーレス環境（Netlify/Vercel）かどうかを判定
-  // ローカルWindows環境で誤検知されないよう、OSのチェックも追加
+  // ローカル Windows 環境で誤検知されないよう、OS のチェックも追加
   const isServerless =
     !!(process.env.NETLIFY || process.env.VERCEL) &&
     process.platform !== "win32";
@@ -63,7 +63,7 @@ export async function generateAndUploadGif(params: GifParameters) {
     const page = await browser.newPage();
     await page.setViewportSize({ width, height });
 
-    // レンダリング用のURL（開発環境または本番環境のベースURLが必要）
+    // レンダリング用の URL（開発環境または本番環境のベース URL が必要）
     // ここでは、特殊なレンダリング用ページ /kinemoji/render を想定
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
     const queryParams = new URLSearchParams({
@@ -83,7 +83,7 @@ export async function generateAndUploadGif(params: GifParameters) {
     console.log(`Navigating to: ${renderUrl}`);
     await page.goto(renderUrl, {
       waitUntil: "networkidle", // ネットワークが落ち着くまで待機
-      timeout: 10000,
+      timeout: 20000, // 10 秒→20 秒に増加（文字数が多い場合の描画時間確保）
     });
 
     console.log("Waiting for .kinemoji-container...");
@@ -95,14 +95,18 @@ export async function generateAndUploadGif(params: GifParameters) {
     const textLength = text.replace(/\n/g, "").length;
 
     const frames: { data: Buffer; delay: number }[] = [];
-    const fps = 8; // 10から8にさらに落として全体のフレーム数を抑制
+    const fps = 10; // 8 から 10 に引き上げ、滑らかさを向上
     const interval = 1000 / fps;
 
     // アニメーションに合わせて時間を計算
-    // サーバーレスのタイムアウト(30s)を考慮し、最大時間を制限
+    // サーバーレスのタイムアウト (30s) を考慮し、最大時間を制限
     let duration = 3;
     if (isLupin) {
-      duration = Math.min(6, Math.max(3, textLength * 0.3 + 1.5)); // 最大録画時間を6秒に制限
+      // Lupin: 文字数に応じて 3-10 秒
+      duration = Math.min(10, Math.max(3, textLength * 0.5 + 2));
+    } else {
+      // 他：文字数に応じて 3-6 秒
+      duration = Math.min(6, Math.max(3, textLength * 0.3 + 1.5));
     }
 
     const totalFrames = Math.floor(fps * duration);
@@ -115,7 +119,7 @@ export async function generateAndUploadGif(params: GifParameters) {
       const frameStart = Date.now();
       const screenshot = await page.screenshot({
         type: "jpeg",
-        quality: 60, // 90から60に落として速度優先
+        quality: 85, // 60 から 85 に引き上げ、画質を向上
         clip: { x: 0, y: 0, width, height },
       });
 
@@ -130,13 +134,13 @@ export async function generateAndUploadGif(params: GifParameters) {
       frames.push({ data: screenshot, delay: actualDelay });
     }
 
-    // GIF生成
+    // GIF 生成
     const encoder = new GIFEncoder(width, height);
     encoder.start();
     encoder.setRepeat(0);
-    encoder.setQuality(10);
+    encoder.setQuality(5); // 10→5 に減少（色数を増やす、1-10 の範囲で 5 が推奨）
 
-    // 並列で画像をデコード（CPUリソースを活用しつつ、メモリを抑えるため順次ではなく一括処理を試みる）
+    // 並列で画像をデコード（CPU リソースを活用しつつ、メモリを抑えるため順次ではなく一括処理を試みる）
     console.log(`Processing ${frames.length} frames with sharp...`);
     const processedFrames = await Promise.all(
       frames.map(async (frame) => {
@@ -160,7 +164,7 @@ export async function generateAndUploadGif(params: GifParameters) {
     // デバッグログ
     console.log("GIF Generated, size:", gifBuffer.length);
 
-    // FormDataを作成してアップロードサービスを呼び出す
+    // FormData を作成してアップロードサービスを呼び出す
     const formData = new FormData();
     const base64Gif = `data:image/gif;base64,${gifBuffer.toString("base64")}`;
     formData.append("image", base64Gif);

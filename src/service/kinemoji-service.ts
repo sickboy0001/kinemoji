@@ -38,6 +38,9 @@ export const kinemojiService = {
     const id = crypto.randomUUID();
     const shortId = nanoid(10);
     const now = new Date();
+    // imageUrl があれば completed、なければ pending
+    const status = imageUrl ? ("completed" as const) : ("pending" as const);
+    const progress = imageUrl ? 100 : 0;
     const result = await db
       .insert(kinemojis)
       .values({
@@ -49,8 +52,8 @@ export const kinemojiService = {
         creatorId,
         createdAt: now,
         updatedAt: now,
-        status: "pending",
-        progress: 0,
+        status,
+        progress,
       })
       .returning();
     return result[0];
@@ -60,5 +63,24 @@ export const kinemojiService = {
     return await db
       .delete(kinemojis)
       .where(and(eq(kinemojis.id, id), eq(kinemojis.creatorId, creatorId)));
+  },
+
+  async updateStatus(
+    id: string,
+    status: "pending" | "processing" | "completed" | "failed",
+    progress?: number,
+    imageUrl?: string,
+    error?: string,
+  ) {
+    const updates: any = { status, updatedAt: new Date() };
+    if (progress !== undefined) updates.progress = progress;
+    if (imageUrl !== undefined) updates.imageUrl = imageUrl;
+    if (error !== undefined) updates.error = error;
+
+    return await db
+      .update(kinemojis)
+      .set(updates)
+      .where(eq(kinemojis.id, id))
+      .returning();
   },
 };

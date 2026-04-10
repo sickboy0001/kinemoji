@@ -23,11 +23,11 @@ export default async function RenderPage({
 
   return (
     <div
-      className="kinemoji-container"
+      className="kinemoji-container overflow-hidden"
       style={{
         width: `${width}px`,
         height: `${height}px`,
-        backgroundColor: backColor,
+        backgroundColor: backColor || "#FFFFFF",
       }}
     >
       <KinemojiDisplay

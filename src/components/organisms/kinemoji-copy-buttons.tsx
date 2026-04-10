@@ -49,18 +49,19 @@ export function KinemojiCopyButtons({
   };
 
   return (
-    <div className="flex flex-wrap gap-2">
-      <div className="flex items-center gap-1">
+    <div className="flex flex-wrap gap-3">
+      <div className="flex items-center gap-1 group">
         <Button
           variant="outline"
           onClick={() => copyToClipboard(shareUrl, "共有URL")}
+          className="rounded-lg border-neutral-200 hover:border-neutral-900 transition-all font-medium text-xs h-9"
         >
-          共有URLをコピー
+          共有URL
         </Button>
         <Button
           variant="ghost"
           size="icon"
-          className="h-10 w-10"
+          className="h-9 w-9 rounded-lg text-neutral-400 hover:text-neutral-900 hover:bg-neutral-100 transition-all"
           onClick={() => {
             window.open(shareUrl, "_blank");
           }}
@@ -72,25 +73,26 @@ export function KinemojiCopyButtons({
 
       <Button
         variant="default"
-        className="bg-black hover:bg-slate-800 text-white flex items-center gap-2"
+        className="bg-neutral-900 hover:bg-neutral-800 text-white flex items-center gap-2 rounded-lg px-4 font-bold text-xs h-9 shadow-md transition-transform active:scale-95"
         onClick={handleXPost}
       >
         <Send className="h-4 w-4" />
-        Xでポスト
+        Xにポスト
       </Button>
 
       {imageUrl && (
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 group">
           <Button
             variant="outline"
             onClick={() => copyToClipboard(imageUrl, "画像URL")}
+            className="rounded-lg border-neutral-200 hover:border-neutral-900 transition-all font-medium text-xs h-9"
           >
-            画像URLをコピー
+            画像URL
           </Button>
           <Button
             variant="ghost"
             size="icon"
-            className="h-10 w-10"
+            className="h-9 w-9 rounded-lg text-neutral-400 hover:text-neutral-900 hover:bg-neutral-100 transition-all"
             onClick={() => {
               window.open(imageUrl, "_blank");
             }}

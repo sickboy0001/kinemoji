@@ -1,7 +1,7 @@
-import { KinemojiDisplay } from "@/components/organisms/kinemoji-display";
 import { kinemojiService } from "@/service/kinemoji-service";
 import { notFound } from "next/navigation";
 import { Metadata } from "next";
+import { KinemojiDetailContent } from "./kinemoji-detail-content";
 
 export async function generateMetadata({
   params,
@@ -47,12 +47,5 @@ export default async function KinemojiDetailPage({
     notFound();
   }
 
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-white p-4">
-      <KinemojiDisplay
-        text={kinemoji.text}
-        parameters={kinemoji.parameters || undefined}
-      />
-    </div>
-  );
+  return <KinemojiDetailContent id={id} />;
 }

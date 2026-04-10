@@ -8,13 +8,40 @@ import { KinemojiCopyButtons } from "@/components/organisms/kinemoji-copy-button
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
+async function fetchKinemojiById(id: string) {
+  try {
+    const response = await fetch(`/api/kinemoji/${id}`);
+    if (!response.ok) {
+      return null;
+    }
+    const data = await response.json();
+    return {
+      ...data,
+      status: data.status || data.gif_status || null,
+      progress: data.progress ?? data.gif_progress ?? null,
+      error: data.error || data.gif_error || null,
+      createdAt: data.createdAt
+        ? new Date(data.createdAt).toISOString()
+        : new Date().toISOString(),
+      updatedAt: data.updatedAt ? new Date(data.updatedAt).toISOString() : null,
+    };
+  } catch (error) {
+    console.error("Error fetching kinemoji:", error);
+    return null;
+  }
+}
+
 interface Kinemoji {
   id: string;
   shortId: string;
   text: string;
   parameters: string | null;
   imageUrl: string | null;
+  status: "pending" | "processing" | "completed" | "failed" | null;
+  progress: number | null;
+  error: string | null;
   createdAt: string;
+  updatedAt: string | null;
 }
 
 function KinemojiListContent() {
@@ -25,28 +52,79 @@ function KinemojiListContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const targetId = searchParams.get("id");
+  const pollingRef = useRef<NodeJS.Timeout | null>(null);
 
+  // リストの取得
   useEffect(() => {
     fetch("/api/posts")
       .then((res) => res.json())
       .then((data) => {
         if (Array.isArray(data)) {
-          setList(data);
+          // updatedAt を含むようにマッピング
+          const mappedData = data.map((item) => ({
+            ...item,
+            createdAt: item.createdAt
+              ? new Date(item.createdAt).toISOString()
+              : new Date().toISOString(),
+            updatedAt: item.updatedAt
+              ? new Date(item.updatedAt).toISOString()
+              : null,
+          }));
+          setList(mappedData);
 
           if (targetId) {
-            const found = data.find((item) => item.id === targetId);
+            const found = mappedData.find((item) => item.id === targetId);
             if (found) {
               setSelected(found);
               return;
             }
           }
 
-          if (data.length > 0 && !selected) {
-            setSelected(data[0]);
+          if (mappedData.length > 0 && !selected) {
+            setSelected(mappedData[0]);
           }
         }
       });
   }, [targetId]);
+
+  // 選択されたアイテムのポーリング（GIF 生成状況の更新）
+  useEffect(() => {
+    if (
+      !selected ||
+      selected.status === "completed" ||
+      selected.status === "failed"
+    ) {
+      if (pollingRef.current) {
+        clearTimeout(pollingRef.current);
+        pollingRef.current = null;
+      }
+      return;
+    }
+
+    const poll = async () => {
+      const updated = await fetchKinemojiById(selected.shortId);
+      if (updated) {
+        setSelected(updated);
+        // リストも更新
+        setList((prev) =>
+          prev.map((item) => (item.id === updated.id ? updated : item)),
+        );
+      }
+
+      if (updated?.status !== "completed" && updated?.status !== "failed") {
+        pollingRef.current = setTimeout(poll, 2000);
+      }
+    };
+
+    poll();
+
+    return () => {
+      if (pollingRef.current) {
+        clearTimeout(pollingRef.current);
+        pollingRef.current = null;
+      }
+    };
+  }, [selected?.id]);
 
   useEffect(() => {
     const updateScale = () => {
@@ -71,75 +149,167 @@ function KinemojiListContent() {
   }, [selected]);
 
   return (
-    <div className="container mx-auto py-10 flex flex-col md:flex-row gap-6 px-4">
-      <div className="w-full md:w-1/3 space-y-4">
-        <div className="flex justify-between items-center">
-          <h2 className="text-2xl font-bold">作成済み一覧</h2>
+    <div className="container mx-auto py-12 flex flex-col md:flex-row gap-12 px-6">
+      <div className="w-full md:w-80 space-y-8">
+        <div className="flex flex-col gap-4">
+          <h2 className="text-4xl font-black tracking-tighter uppercase">
+            Gallery
+          </h2>
           <Button
-            variant="outline"
+            variant="default"
             onClick={() => router.push("/kinemoji/new")}
+            className="w-full bg-orange-600 hover:bg-orange-700 text-white rounded-xl py-6 font-bold shadow-lg shadow-orange-100"
           >
             新規作成
           </Button>
         </div>
-        <div className="space-y-2 max-h-[70vh] overflow-y-auto pr-2">
+        <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-3 custom-scrollbar">
           {list.map((item) => (
             <div
               key={item.id}
-              className={`p-4 rounded-lg border cursor-pointer transition-colors ${
+              className={`p-5 rounded-2xl border transition-all duration-300 group cursor-pointer ${
                 selected?.id === item.id
-                  ? "bg-black text-white border-black"
-                  : "bg-card hover:bg-slate-50 border-slate-200"
+                  ? "bg-neutral-900 text-white border-neutral-900 shadow-xl -translate-y-1"
+                  : "bg-white hover:bg-neutral-50 border-neutral-100 hover:border-neutral-300"
               }`}
               onClick={() => setSelected(item)}
             >
-              <p className="font-medium truncate">{item.text}</p>
-              <p className="text-xs opacity-70">
-                {new Date(item.createdAt).toLocaleString()}
+              <p className="font-bold truncate text-lg tracking-tight">
+                {item.text}
               </p>
+              <div className="flex items-center justify-between mt-2 opacity-60 group-hover:opacity-100 transition-opacity">
+                <p className="text-[10px] font-medium uppercase tracking-widest">
+                  {new Date(item.createdAt).toLocaleDateString()}
+                </p>
+                <div className="w-1.5 h-1.5 rounded-full bg-orange-500" />
+              </div>
             </div>
           ))}
           {list.length === 0 && (
-            <p className="text-center text-slate-500 py-10 border rounded-lg border-dashed">
-              まだありません
-            </p>
+            <div className="text-center py-16 border-2 border-dashed border-neutral-100 rounded-3xl bg-neutral-50/50">
+              <p className="text-neutral-400 text-sm font-medium">
+                まだ作品がありません
+              </p>
+            </div>
           )}
         </div>
       </div>
 
       <div className="flex-1" ref={containerRef}>
         {selected ? (
-          <Card className="h-full min-h-[400px] flex flex-col items-center justify-center p-10 bg-slate-50 relative overflow-hidden">
-            <div className="absolute top-4 right-4 text-xs text-slate-400">
-              ID: {selected.shortId}
-            </div>
-            <div
-              key={`${selected.id}-${selected.parameters}`}
-              className="flex justify-center transition-transform duration-300 origin-center cursor-pointer hover:opacity-80 transition-opacity"
-              style={{
-                transform: `scale(${scale})`,
-              }}
-              onClick={() => {
-                window.open(`/kinemoji/${selected.shortId}`, "_blank");
-              }}
-              title="別タブで詳細を開く"
-            >
-              <KinemojiDisplay
-                text={selected.text}
-                parameters={selected.parameters || undefined}
-              />
-            </div>
-            <div className="mt-10">
+          <div className="h-full flex flex-col gap-6">
+            <Card className="flex-1 min-h-[500px] flex flex-col items-center justify-center p-12 bg-neutral-100 border-none rounded-[2rem] relative overflow-hidden shadow-inner">
+              <div className="absolute top-8 left-8 flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-orange-500 animate-pulse" />
+                <span className="text-[10px] font-black uppercase tracking-widest text-neutral-400">
+                  Preview Mode
+                </span>
+              </div>
+              <div className="absolute top-8 right-8 px-3 py-1 bg-white rounded-full shadow-sm">
+                <span className="text-[10px] font-bold text-neutral-500">
+                  #{selected.shortId}
+                </span>
+              </div>
+
+              <div
+                key={`${selected.id}-${selected.parameters}-${selected.imageUrl}`}
+                className="flex justify-center transition-all duration-500 origin-center cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
+                style={{
+                  transform: `scale(${scale})`,
+                }}
+                onClick={() => {
+                  window.open(`/kinemoji/${selected.shortId}`, "_blank");
+                }}
+                title="別タブで詳細を開く"
+              >
+                <div className="shadow-2xl rounded-sm overflow-hidden ring-12 ring-white/30 transition-shadow hover:ring-white/50">
+                  {selected.imageUrl &&
+                  (selected.status === "completed" ||
+                    selected.status === null) ? (
+                    <img
+                      src={selected.imageUrl}
+                      alt={selected.text}
+                      className="max-w-full h-auto"
+                    />
+                  ) : selected.status === "processing" ? (
+                    <div className="w-[400px] h-[400px] flex flex-col items-center justify-center bg-neutral-100">
+                      <p className="text-lg font-medium mb-4">GIF 生成中...</p>
+                      <div className="w-64 bg-neutral-200 rounded-full h-4 mb-4">
+                        <div
+                          className="bg-orange-500 h-4 rounded-full transition-all"
+                          style={{ width: `${selected.progress || 0}%` }}
+                        />
+                      </div>
+                      <p className="text-sm text-neutral-500">
+                        {selected.progress || 0}%
+                      </p>
+                    </div>
+                  ) : selected.status === "pending" ? (
+                    <div className="w-[400px] h-[400px] flex flex-col items-center justify-center bg-neutral-100">
+                      <p className="text-lg font-medium mb-4">
+                        GIF 生成待ち...
+                      </p>
+                      <Button onClick={() => window.location.reload()}>
+                        再試行
+                      </Button>
+                    </div>
+                  ) : selected.status === "failed" ? (
+                    <div className="w-[400px] h-[400px] flex flex-col items-center justify-center bg-neutral-100">
+                      <p className="text-lg font-medium mb-4 text-red-500">
+                        GIF 生成に失敗しました
+                      </p>
+                      {selected.error && (
+                        <p className="text-sm text-neutral-500 mb-4">
+                          {selected.error}
+                        </p>
+                      )}
+                      <Button onClick={() => window.location.reload()}>
+                        再試行
+                      </Button>
+                    </div>
+                  ) : (
+                    <KinemojiDisplay
+                      text={selected.text}
+                      parameters={selected.parameters || undefined}
+                    />
+                  )}
+                </div>
+              </div>
+            </Card>
+
+            <div className="bg-white p-8 rounded-[2rem] border border-neutral-100 shadow-sm flex flex-col md:flex-row items-center justify-between gap-6">
+              <div className="space-y-1">
+                <h3 className="text-xl font-black tracking-tight">
+                  {selected.text}
+                </h3>
+                <div className="space-y-1">
+                  <p className="text-xs text-neutral-400 font-medium uppercase tracking-tighter">
+                    Created on {new Date(selected.createdAt).toLocaleString()}
+                  </p>
+                  {selected.updatedAt &&
+                    selected.updatedAt !== selected.createdAt && (
+                      <p className="text-xs text-neutral-400 font-medium uppercase tracking-tighter">
+                        Updated on{" "}
+                        {new Date(selected.updatedAt).toLocaleString()}
+                      </p>
+                    )}
+                </div>
+              </div>
               <KinemojiCopyButtons
                 shortId={selected.shortId}
                 text={selected.text}
                 imageUrl={selected.imageUrl}
               />
             </div>
-          </Card>
+          </div>
         ) : (
-          <div className="h-full min-h-[400px] flex items-center justify-center text-slate-400 bg-slate-50 rounded-lg">
-            選択してください
+          <div className="h-full min-h-[500px] flex flex-col items-center justify-center text-neutral-300 bg-neutral-50 rounded-[2rem] border-2 border-dashed border-neutral-200 gap-4">
+            <div className="w-20 h-20 rounded-full bg-neutral-100 flex items-center justify-center">
+              <ExternalLink className="w-8 h-8 opacity-20" />
+            </div>
+            <p className="font-bold uppercase tracking-widest text-xs">
+              作品を選択してください
+            </p>
           </div>
         )}
       </div>

@@ -1,73 +1,223 @@
-Netlify Background Functionsの利用についてのご相談ですね。結論から申し上げますと、**「GIFの品質（フレーム数や長さ）を優先したい場合」には非常に有効な解決策**ですが、**「ユーザー体験（UX）の設計変更」が必要**になります。
+# 20260408 - Background Functions 実装ガイド
 
-現在の同期的なフローと比較して、以下のようなメリット・デメリット・検討事項があります。
+## 概要
 
-### 1. メリット
-*   **タイムアウトからの解放**: 最大15分まで処理が許容されるため、今回のような30秒制限を気にする必要がなくなります。
-*   **高品質化**: FPSを上げたり（例: 20~30 FPS）、録画時間を長くしたり、高画質なエンコード設定が可能になります。
-*   **リトライ耐性**: 処理に失敗した際のリトライ制御などがしやすくなります。
+Netlify Background Functions を利用した非同期 GIF 生成フローの実装ガイド。現在のプロジェクト状態に基づき、実装済みの機能と今後の移行方針を記載する。
 
-### 2. デメリットとUXの変更点
-*   **非同期レスポンス**: フロントエンドには「受け付けました（202 Accepted）」のみを即座に返し、ユーザーを待機画面に遷移させる必要があります。
-*   **完了通知の仕組み**: 処理が終わったことをユーザーにどう伝えるか（またはどう表示するか）の実装が必要です。
-    *   **ポーリング**: フロントエンドから数秒おきにDB（Turso）を確認し、`imageUrl` が更新されたら表示を切り替える。
-    *   **リスト画面での待機**: 「生成中...」というステータスを一覧に表示しておき、完了後に画像に切り替わるようにする。
-*   **実装の分離**: Next.jsの `app/api` ルートではなく、Netlify固有の `netlify/functions` ディレクトリ配下に関数を配置する必要があります（ファイル名に `-background` を付与）。
+## 現状の実装状況 (2026-04-10 時点)
 
-### 3. Kinemojiにおける判断基準
-*   **現在の8 FPS / 最大6秒設定で満足できる場合**: 
-    *   今のまま（同期処理）の方が、作成してすぐに結果が見えるためUXとしてはスムーズです。
-*   **もっと長く、滑らかに動かしたい場合**: 
-    *   Background Functions への移行が必須となります。
+### ✅ 実装済み機能
 
-### おすすめの構成（移行する場合）
-1.  フロントエンドが `/api/kinemoji/gif-trigger` を呼ぶ。
-2.  このAPIが DB に「ステータス: 生成中」のレコードを作成し、**Background Function** を起動（Webhookや内部リクエスト）して、ユーザーに 202 を返す。
-3.  ユーザーは一覧画面へ移動。そこには「生成中アイコン」が表示されている。
-4.  Background Function が処理を終えたら、DB のレコードを `imageUrl` で更新し、「ステータス: 完了」にする。
-5.  一覧画面を（ポーリング等で）見ていたユーザーの画面に GIF が現れる。
+1. **データベーススキーマ**
+   - `kinemojis` テーブルに以下の列を追加済み：
+     - `gif_status`: `text` ("pending" | "processing" | "completed" | "failed")
+     - `gif_progress`: `integer` (0-100)
+     - `gif_error`: `text`
 
-非常に確実な方法ですので、将来的に機能拡張（動画書き出しなど）を見据えるのであれば、検討の価値は十分にあります。現状の制限（30秒以内）で運用が厳しいと感じられたタイミングが、導入のベストな時期かと思われます。
+2. **サービス層**
+   - [`kinemojiService.create()`](../../src/service/kinemoji-service.ts:32): `imageUrl` に応じて自動で `status` を設定
+   - [`kinemojiService.updateStatus()`](../../src/service/kinemoji-service.ts:59): ステータス更新用メソッド
 
+3. **API エンドポイント**
+   - `POST /api/kinemoji/create`: レコード作成（`status: "processing"`）
+   - `POST /api/kinemoji/update-status`: ステータス更新（`completed`/`failed`）
+   - `POST /api/kinemoji/gif`: GIF 生成（同期処理）
 
+4. **フロントエンド**
+   - [`kinemoji-new-page.tsx`](../../src/components/pages/kinemoji-new-page.tsx:120): 2 段階フロー（作成 → GIF 生成 → 更新）
+   - [`kinemoji-list-page.tsx`](../../src/components/pages/kinemoji-list-page.tsx:1): ポーリング機能実装
+   - [`kinemoji-detail-content.tsx`](../../src/app/kinemoji/[id]/kinemoji-detail-content.tsx:1): 詳細ページのポーリング
 
-`kinemojis` テーブルに進捗管理用の列を追加し、フロントエンドでのポーリングロジックの案をまとめました。
+5. **UI 表示**
+   - `status === "processing"`: 進捗バー表示
+   - `status === "pending"`: "GIF 生成待ち..."表示
+   - `status === "completed"`: GIF 画像表示
+   - `status === "failed"`: エラーメッセージと再試行ボタン
 
-### 1. DBスキーマへの列追加 (作成済み)
-[`src/db/schema/index.ts`](src/db/schema/index.ts) に以下の列を追加しました。
+### ⚠️ 現在の制限事項
 
-- **`status`**: `text` ("pending" | "processing" | "completed" | "failed")
-  - GIF生成の現在のステータスを管理します。初期値は "pending" です。
-- **`progress`**: `integer` (0-100)
-  - 生成の進捗率を数値で保持します。
-- **`error`**: `text`
-  - 生成失敗時のエラー内容を記録します。
+- **同期処理**: GIF 生成は現在、同期処理で実行されている（最大 30 秒の制限あり）
+- **タイムアウト**: 重い GIF 生成（高 FPS、長時間）はタイムアウトする可能性
+- **Netlify 制限**: 通常の Functions は 30 秒のタイムアウト制限あり
 
-### 2. フロントエンドでの進捗更新ロジック案
-ポーリングを行うための React フックや `useEffect` の実装イメージです。
+## Netlify Background Functions への移行
 
-```tsx
-// ポーリングロジックの例
-useEffect(() => {
-  if (selected && (selected.gifStatus === "pending" || selected.gifStatus === "processing")) {
-    const timer = setTimeout(async () => {
-      // 単一のキネ文字情報を再取得するAPI（未実装の場合は作成が必要）
-      const res = await fetch(`/api/posts/${selected.id}`);
-      const updatedData = await res.json();
-      
-      // 一覧の状態を更新
-      setList(prev => prev.map(item => item.id === updatedData.id ? updatedData : item));
-      setSelected(updatedData);
-    }, 3000); // 3秒おきにチェック
+### 移行の必要性
 
-    return () => clearTimeout(timer);
-  }
-}, [selected?.status, selected?.id]);
+以下のケースで Background Functions への移行が推奨される：
+
+- **高品質 GIF**: FPS を 20~30 に上げたい場合
+- **長時間 GIF**: 録画時間を 6 秒以上に延長したい場合
+- **複雑なアニメーション**: 処理時間が 30 秒を超える可能性のある機能
+
+### 移行後のアーキテクチャ
+
+```
+┌─────────────┐      ┌──────────────────┐      ┌─────────────────────┐
+│   Client    │─────▶│ /api/kinemoji    │─────▶│ Background Function │
+│             │      │ /create          │      │ (netlify/functions) │
+└─────────────┘      └──────────────────┘      └─────────────────────┘
+       │                       │                        │
+       │                       ▼                        ▼
+       │              ┌──────────────────┐      ┌─────────────────────┐
+       │◀─────────────│ DB: status=      │      │ GIF 生成処理         │
+       │   202 Accepted│  "processing"    │      │ (最大 15 分)          │
+       │               └──────────────────┘      └─────────────────────┘
+       │                                                   │
+       ▼                                                   ▼
+┌─────────────┐                                  ┌─────────────────────┐
+│ ポーリング   │◀─────────────────────────────────│ DB: status=         │
+│ (2 秒ごと)   │                                  │  "completed"        │
+└─────────────┘                                  └─────────────────────┘
 ```
 
-### 3. UIでの表現案
-- **進捗中**: `KinemojiDisplay` の代わりに「GIF生成中... (60%)」といったプログレスバーやスケルトンを表示。
-- **完了**: `status === "completed"` になったら `imageUrl` を使って GIF を表示し、共有ボタンを有効化。
-- **失敗**: 再試行ボタンを表示。
+### 実装手順
 
-この構成により、バックグラウンドでの重いGIF生成処理をユーザーにストレスなく伝えることが可能になります。
+#### 1. Background Function の作成
+
+`netlify/functions/kinemoji-gif-background.ts` を作成：
+
+```typescript
+import { Handler } from "@netlify/functions";
+import { generateAndUploadGif } from "../src/service/kinemoji-gif-service";
+import { db } from "../src/lib/turso/db";
+import { kinemojis } from "../src/db/schema";
+import { eq } from "drizzle-orm";
+
+export const handler: Handler = async (event) => {
+  if (event.httpMethod !== "POST") {
+    return { statusCode: 405, body: "Method Not Allowed" };
+  }
+
+  const { id, text, type, action, width, height, foreColor, backColor } = JSON.parse(event.body || "{}");
+
+  if (!id) {
+    return { statusCode: 400, body: "id is required" };
+  }
+
+  try {
+    // GIF 生成処理（最大 15 分まで実行可能）
+    const result = await generateAndUploadGif({
+      text,
+      type,
+      action,
+      width,
+      height,
+      foreColor,
+      backColor,
+    });
+
+    if (result.success) {
+      // DB を更新
+      await db
+        .update(kinemojis)
+        .set({
+          status: "completed",
+          progress: 100,
+          imageUrl: result.url,
+          updatedAt: new Date(),
+        })
+        .where(eq(kinemojis.id, id));
+    } else {
+      // エラー処理
+      await db
+        .update(kinemojis)
+        .set({
+          status: "failed",
+          progress: 0,
+          error: result.error,
+          updatedAt: new Date(),
+        })
+        .where(eq(kinemojis.id, id));
+    }
+
+    return { statusCode: 200, body: JSON.stringify({ success: true }) };
+  } catch (error) {
+    console.error("Background function error:", error);
+    
+    await db
+      .update(kinemojis)
+      .set({
+        status: "failed",
+        error: error instanceof Error ? error.message : "Unknown error",
+        updatedAt: new Date(),
+      })
+      .where(eq(kinemojis.id, id));
+
+    return { statusCode: 500, body: JSON.stringify({ error: "Internal error" }) };
+  }
+};
+```
+
+#### 2. 主要 API の変更
+
+`POST /api/kinemoji/create` を変更し、Background Function をトリガー：
+
+```typescript
+// 既存の処理に追加：
+// Background Function を非同期で起動
+fetch(`${process.env.NETLIFY_FUNCTION_URL}/kinemoji-gif-background`, {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    id,
+    text,
+    type,
+    action,
+    width,
+    height,
+    foreColor,
+    backColor,
+  }),
+}).catch((err) => console.error("Background function trigger failed:", err));
+
+// すぐに 202 を返す
+return NextResponse.json({ id, shortId, status: "processing" }, { status: 202 });
+```
+
+#### 3. Netlify 設定
+
+`netlify.toml` に Background Functions の設定を追加：
+
+```toml
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
+
+[[functions]]
+  name = "kinemoji-gif-background"
+  background = true
+  timeout = 900 # 15 分（900 秒）
+```
+
+### UX 設計の変更点
+
+1. **即時レスポンス**: ユーザーは「作成リクエストを受け付けました」のメッセージを即座に受け取る
+2. **待機画面**: リスト画面または詳細画面で「生成中...」を表示
+3. **ポーリング**: 2 秒ごとに DB をチェックし、完了時に自動的に GIF を表示
+4. **エラー処理**: 失敗時は再試行ボタンを表示
+
+## 実装チェックリスト
+
+- [x] データベーススキーマに `status`, `progress`, `error` を追加
+- [x] `kinemojiService.updateStatus()` メソッドを実装
+- [x] `POST /api/kinemoji/create` エンドポイントを作成
+- [x] `POST /api/kinemoji/update-status` エンドポイントを作成
+- [x] フロントエンドでポーリングロジックを実装
+- [x] UI に進捗表示を実装
+- [ ] Background Function (`netlify/functions/kinemoji-gif-background.ts`) を作成
+- [ ] `POST /api/kinemoji/create` を Background Function 起動用に修正
+- [ ] `netlify.toml` に Background Functions 設定を追加
+- [ ] 負荷テストで 15 分処理を確認
+- [ ] エラーハンドリングとリトライロジックを検証
+
+## 参考資料
+
+- [Netlify Background Functions ドキュメント](https://docs.netlify.com/functions/background-functions/)
+- [プロジェクト AGENTS.md](../../AGENTS.md)
+- [GIF 生成サービス](../../src/service/kinemoji-gif-service.ts)
+
+---
+
+**最終更新**: 2026-04-10  
+**ステータス**: 基本フロー実装完了、Background Functions 移行準備中
