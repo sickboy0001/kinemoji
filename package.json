@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "postbuild": "npx playwright install chromium --with-deps",
     "start": "next start",
     "lint": "eslint",
     "netlify-dev": "netlify dev"
