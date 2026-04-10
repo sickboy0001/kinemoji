@@ -1,27 +1,29 @@
 [build]
-  command = "npm run build"
-  publish = ".next"
+command = "npm run build"
+publish = ".next"
 
 [build.environment]
-  # Netlifyでのビルド時に使用するNode.jsのバージョンを指定
-  NODE_VERSION = "20"
-  # Playwright/Chromium/Sharpを使用するため、Edge Runtimeは無効にする必要があります
-  NEXT_USE_NETLIFY_EDGE = "false"
+# Netlify でのビルド時に使用する Node.js のバージョンを指定
+NODE_VERSION = "20"
+# Playwright/Chromium/Sharp を使用するため、Edge Runtime は無効にする必要があります
+NEXT_USE_NETLIFY_EDGE = "false"
+# Playwright ブラウザのインストールパスを指定
+PLAYWRIGHT_BROWSERS_PATH = "/tmp/playwright-browsers"
 
 [[plugins]]
-  package = "@netlify/plugin-nextjs"
+package = "@netlify/plugin-nextjs"
 
 [functions."*"]
-  # サーバーレス関数の設定（GIF生成などでタイムアウトしやすいため）
-  included_files = ["node_modules/playwright-core/**", "node_modules/@sparticuz/chromium/**"]
-  # サーバーレス関数のタイムアウト時間を延ばす（最大60秒、デフォルト10秒）
-  timeout = 60
-  
-  # Background Functions 設定
-  [functions.kinemoji-gif-background]
-  # Background Function として登録
-  background = true
-  # 最大 15 分（900 秒）まで実行可能
-  timeout = 900
-  # 必要なファイルを含める
-  included_files = ["node_modules/playwright-core/**", "node_modules/@sparticuz/chromium/**", "node_modules/@libsql/**", "node_modules/drizzle-orm/**"]
+# サーバーレス関数の設定（GIF 生成などでタイムアウトしやすいため）
+included_files = ["node_modules/playwright-core/**", "node_modules/@sparticuz/chromium/**"]
+# サーバーレス関数のタイムアウト時間を延ばす（最大 60 秒、デフォルト 10 秒）
+timeout = 60
+
+# Background Functions 設定
+[functions.kinemoji-gif-background]
+# Background Function として登録
+background = true
+# 最大 15 分（900 秒）まで実行可能
+timeout = 900
+# 必要なファイルを含める
+included_files = ["node_modules/playwright-core/**", "node_modules/@sparticuz/chromium/**", "node_modules/@libsql/**", "node_modules/drizzle-orm/**", "/tmp/playwright-browsers/**"]

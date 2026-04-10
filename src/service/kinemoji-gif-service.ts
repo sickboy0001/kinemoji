@@ -1,8 +1,16 @@
 import { chromium } from "playwright-core";
-import chromiumServerless from "@sparticuz/chromium";
 import GIFEncoder from "gif-encoder-2";
 import sharp from "sharp";
 import { uploadKinemojiImage } from "./kinemoji-upload-service";
+import * as os from "os";
+import * as path from "path";
+
+// Playwright ブラウザのパスを設定（Netlify 環境用）
+// ビルド時にインストールされたブラウザの場所を指定
+const playwrightBrowsersPath =
+  process.env.PLAYWRIGHT_BROWSERS_PATH ||
+  path.join(os.homedir(), ".cache", "ms-playwright");
+process.env.PLAYWRIGHT_BROWSERS_PATH = playwrightBrowsersPath;
 
 interface GifParameters {
   text: string;
@@ -25,13 +33,22 @@ export async function generateAndUploadGif(params: GifParameters) {
 
   let browser;
   if (isServerless) {
-    console.log("Running in serverless mode, launching sparticuz-chromium...");
+    console.log("Running in serverless mode, launching playwright chromium...");
     try {
-      // @sparticuz/chromium を使用
+      // Netlify 環境では playwright の chromium を直接使用
+      // ビルド時に `npx playwright install chromium` でインストールされたブラウザを使用
       browser = await chromium.launch({
         headless: true,
-        args: chromiumServerless.args,
-        executablePath: await chromiumServerless.executablePath(),
+        args: [
+          "--no-sandbox",
+          "--disable-setuid-sandbox",
+          "--disable-dev-shm-usage",
+          "--disable-accelerated-2d-canvas",
+          "--no-first-run",
+          "--no-zygote",
+          "--single-process",
+          "--disable-gpu",
+        ],
       });
     } catch (error) {
       console.error("Serverless chromium launch failed:", error);
