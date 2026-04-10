@@ -1,5 +1,5 @@
 import puppeteer, { Browser, Page } from "puppeteer-core";
-import chromium from "@sparticuz/chromium-min";
+import chromium from "@sparticuz/chromium";
 import GIFEncoder from "gif-encoder-2";
 import sharp from "sharp";
 import { uploadKinemojiImage } from "./kinemoji-upload-service";
