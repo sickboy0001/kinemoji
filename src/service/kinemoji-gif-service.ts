@@ -1,5 +1,4 @@
 import { chromium } from "playwright-core";
-import chromiumServerless from "@sparticuz/chromium";
 import GIFEncoder from "gif-encoder-2";
 import sharp from "sharp";
 import { uploadKinemojiImage } from "./kinemoji-upload-service";
@@ -25,12 +24,21 @@ export async function generateAndUploadGif(params: GifParameters) {
 
   let browser;
   if (isServerless) {
-    console.log("Running in serverless mode, launching sparticuz-chromium...");
+    console.log("Running in serverless mode, launching playwright chromium...");
     try {
+      // Netlify 環境では playwright の chromium を直接使用
       browser = await chromium.launch({
-        args: chromiumServerless.args,
-        executablePath: await chromiumServerless.executablePath(),
         headless: true,
+        args: [
+          "--no-sandbox",
+          "--disable-setuid-sandbox",
+          "--disable-dev-shm-usage",
+          "--disable-accelerated-2d-canvas",
+          "--no-first-run",
+          "--no-zygote",
+          "--single-process",
+          "--disable-gpu",
+        ],
       });
     } catch (error) {
       console.error("Serverless chromium launch failed:", error);
