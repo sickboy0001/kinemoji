@@ -1,7 +1,6 @@
 import puppeteer, { Browser, Page } from "puppeteer-core";
 import chromium from "@sparticuz/chromium";
-import GIFEncoder from "@/lib/gif-encoder-2/GIFEncoder";
-import sharp from "sharp";
+import GIFEncoder from "gif-encoder-2";
 import { uploadKinemojiImage } from "./kinemoji-upload-service";
 
 interface GifParameters {
@@ -14,7 +13,10 @@ interface GifParameters {
   backColor: string;
 }
 
-export async function generateAndUploadGif(params: GifParameters) {
+export async function generateAndUploadGif(
+  params: GifParameters,
+  shortId: string,
+) {
   const { text, type, action, width, height, foreColor, backColor } = params;
 
   const isServerless =
@@ -27,7 +29,6 @@ export async function generateAndUploadGif(params: GifParameters) {
   try {
     if (isServerless) {
       console.log("Running in serverless mode, launching chromium...");
-      // Netlify 環境では @sparticuz/chromium-min を使用
       browser = await puppeteer.launch({
         args: chromium.args,
         defaultViewport: chromium.defaultViewport,
@@ -36,8 +37,14 @@ export async function generateAndUploadGif(params: GifParameters) {
       });
     } else {
       console.log("Running in local mode, launching standard chromium...");
-      // ローカル環境では標準の Chromium を使用
+      const executablePath =
+        process.env.CHROME_PATH ||
+        (process.platform === "win32"
+          ? "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"
+          : undefined);
+
       browser = await puppeteer.launch({
+        executablePath,
         headless: true,
         args: ["--no-sandbox", "--disable-setuid-sandbox"],
       });
@@ -58,18 +65,26 @@ export async function generateAndUploadGif(params: GifParameters) {
       timeout: 30000,
     });
 
-    // GIF 生成
-    const encoder = new GIFEncoder(width, height);
-    encoder.start();
-    encoder.setRepeat(0); // 無限ループ
-    encoder.setDelay(type === "animation" ? 100 : 0);
-    encoder.setQuality(10);
+    // アニメーションかどうかを action で判定
+    const isAnimation = action === "typewriter" || action === "animation";
 
-    // フレームをキャプチャ
-    const frameCount = type === "animation" ? 30 : 1;
+    console.log(`GIF dimensions: width=${width}, height=${height}`);
+
+    // アニメーションの場合は、開始前に少し待機
+    if (isAnimation) {
+      console.log("Waiting for animation to start...");
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    }
+
+    // GIF エンジン初期化
+    const frameCount = isAnimation ? 30 : 1;
+    const encoder = new GIFEncoder(width, height);
+    encoder.setRepeat(0); // 0 for infinite loop
+    encoder.setDelay(100); // 100ms per frame (10fps)
+    encoder.start();
+
     for (let i = 0; i < frameCount; i++) {
-      if (type === "animation") {
-        // アニメーションの場合は少し待機
+      if (isAnimation) {
         await new Promise((resolve) => setTimeout(resolve, 100));
       }
 
@@ -77,43 +92,65 @@ export async function generateAndUploadGif(params: GifParameters) {
         type: "png",
         fullPage: false,
       });
-      encoder.addFrame(screenshot);
+
+      // GIF エンジンにフレームを追加
+      const pngData = Buffer.from(screenshot);
+      const rgbaData = new Uint8ClampedArray(pngData);
+
+      // RGBA から RGB に変換（アルファチャンネルを無視、背景色を適用）
+      const rgbData = new Buffer(width * height * 3);
+      for (let j = 0; j < width * height; j++) {
+        const alpha = rgbaData[j * 4 + 3];
+        if (alpha === 0) {
+          // 透明なピクセルは背景色で埋める
+          const backR = parseInt(backColor.slice(1, 3), 16);
+          const backG = parseInt(backColor.slice(3, 5), 16);
+          const backB = parseInt(backColor.slice(5, 7), 16);
+          rgbData[j * 3] = backR;
+          rgbData[j * 3 + 1] = backG;
+          rgbData[j * 3 + 2] = backB;
+        } else {
+          rgbData[j * 3] = rgbaData[j * 4];
+          rgbData[j * 3 + 1] = rgbaData[j * 4 + 1];
+          rgbData[j * 3 + 2] = rgbaData[j * 4 + 2];
+        }
+      }
+
+      encoder.addFrame(rgbData);
+      console.log(`Frame ${i} added to GIF encoder`);
     }
 
     encoder.finish();
     const gifBuffer = encoder.out.getData();
 
-    if (!gifBuffer) {
-      throw new Error("Failed to generate GIF buffer");
-    }
+    console.log(`GIF generated: ${gifBuffer.length} bytes`);
 
-    // 画像を圧縮（オプション）
-    let finalBuffer = gifBuffer;
-    if (gifBuffer.length > 2 * 1024 * 1024) {
-      console.log("Compressing GIF...");
-      finalBuffer = await sharp(gifBuffer as any)
-        .resize({ width: Math.min(width, 800), fit: "inside" })
-        .toFormat("gif")
-        .toBuffer();
-    }
-
-    // R2 にアップロード
+    // GIF をアップロード
+    console.log("Uploading GIF to Netlify storage...");
     const formData = new FormData();
-    const blob = new Blob([finalBuffer.buffer as ArrayBuffer], {
+    const gifBlob = new Blob([gifBuffer.buffer as ArrayBuffer], {
       type: "image/gif",
     });
-    formData.append("file", blob, "output.gif");
+    formData.append("file", gifBlob, `${shortId}.gif`);
+    formData.append("text", text);
+    formData.append("type", type);
+    formData.append("action", action);
+    formData.append("width", width.toString());
+    formData.append("height", height.toString());
+    formData.append("foreColor", foreColor);
+    formData.append("backColor", backColor);
 
-    const result = await uploadKinemojiImage(formData);
+    const imageUrl = await uploadKinemojiImage(formData);
 
-    if (!result.success || !result.url) {
-      throw new Error(result.error || "Failed to upload GIF");
-    }
+    console.log(`GIF uploaded: ${imageUrl}`);
 
     return {
       success: true,
-      url: result.url,
+      url: imageUrl,
     };
+  } catch (error) {
+    console.error("GIF generation error:", error);
+    throw error;
   } finally {
     if (browser) {
       await browser.close();

@@ -125,8 +125,8 @@ export function KinemojiNewPage() {
 
     setIsLoading(true);
     try {
-      // 1. レコードを作成（status: "processing"）
-      const createResponse = await fetch("/api/kinemoji/create", {
+      // 直接 GIF 生成 API を叩く（データの登録も外部 API 側で行われる）
+      const gifResponse = await fetch("/kinemoji/gif", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -142,123 +142,54 @@ export function KinemojiNewPage() {
         }),
       });
 
-      if (!createResponse.ok) {
-        throw new Error("レコード作成に失敗しました");
+      if (!gifResponse.ok) {
+        throw new Error("GIF 生成リクエストに失敗しました");
       }
 
-      const { id, shortId } = await createResponse.json();
-      console.log("Kinemoji created:", { id, shortId });
+      const { id } = await gifResponse.json();
+      console.log("GIF generation started:", { id });
 
-      // 2. Background Function をトリガー（非同期処理開始）
-      // Netlify 環境かどうかを URL で判定（localhost でなければ Netlify とみなす）
-      const isNetlify = !window.location.hostname.includes("localhost");
-      if (isNetlify) {
-        // Background Function を呼び出して非同期処理を開始
-        const backgroundFunctionUrl =
-          "/.netlify/functions/kinemoji-gif-background";
-        await fetch(backgroundFunctionUrl, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            id,
-            text,
-            type,
-            action,
-            width,
-            height,
-            foreColor,
-            backColor,
-          }),
-        }).catch((err) => {
-          console.error("Background function trigger failed:", err);
-        });
+      // ポーリングで完了を待つ（最大 120 秒）
+      let status = "pending";
+      let shortId = "";
+      let attempts = 0;
+      const maxAttempts = 60; // 2 秒間隔で 120 秒
 
-        // ポーリングで完了を待つ（最大 120 秒）
-        let status = "processing";
-        let imageUrl = null;
-        let attempts = 0;
-        const maxAttempts = 60; // 2 秒間隔で 120 秒
+      while (
+        (status === "pending" || status === "processing") &&
+        attempts < maxAttempts
+      ) {
+        await new Promise((resolve) => setTimeout(resolve, 2000)); // 2 秒待機
 
-        while (status === "processing" && attempts < maxAttempts) {
-          await new Promise((resolve) => setTimeout(resolve, 2000)); // 2 秒待機
+        const statusResponse = await fetch(`/kinemoji/status/${id}`);
+        if (statusResponse.ok) {
+          const data = await statusResponse.json();
+          status = data.status;
+          // shortId が取得できれば保存（完了後の遷移に使用）
+          // API のレスポンスに shortId が含まれていない場合は id をそのまま使う
+          shortId = data.shortId || data.id;
 
-          const statusResponse = await fetch(`/api/kinemoji/${id}`);
-          if (statusResponse.ok) {
-            const data = await statusResponse.json();
-            status = data.status;
-            imageUrl = data.imageUrl;
-
-            if (status === "completed") {
-              break;
-            }
-            if (status === "failed") {
-              throw new Error(data.error || "GIF 生成に失敗しました");
-            }
+          if (status === "completed") {
+            break;
           }
-          attempts++;
-        }
-
-        if (status !== "completed") {
-          throw new Error("GIF 生成がタイムアウトしました");
-        }
-
-        toast.success("作成しました！");
-        router.push(`/kinemoji/list?id=${shortId}`);
-      } else {
-        // ローカル環境：同期処理で GIF 生成（開発用）
-        let imageUrl = null;
-        try {
-          const gifResponse = await fetch("/api/kinemoji/gif", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              text,
-              type,
-              action,
-              width,
-              height,
-              foreColor,
-              backColor,
-            }),
-          });
-
-          if (gifResponse.ok) {
-            const uploadResult = await gifResponse.json();
-            if (uploadResult.success) {
-              imageUrl = uploadResult.url;
-            }
-          } else {
-            console.error("GIF generation failed:", await gifResponse.text());
+          if (status === "failed") {
+            throw new Error(data.error || "GIF 生成に失敗しました");
           }
-        } catch (uploadError) {
-          console.error("Image generation/upload error:", uploadError);
         }
-
-        // ステータスを更新
-        const updateStatus = imageUrl ? "completed" : "failed";
-        const updateProgress = imageUrl ? 100 : 0;
-
-        const updateResponse = await fetch("/api/kinemoji/update-status", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            id,
-            status: updateStatus,
-            progress: updateProgress,
-            imageUrl: imageUrl || undefined,
-            error: imageUrl ? undefined : "GIF 生成に失敗しました",
-          }),
-        });
-
-        if (!updateResponse.ok) {
-          console.error("Status update failed:", await updateResponse.text());
-        }
-
-        toast.success("作成しました！");
-        router.push(`/kinemoji/list?id=${shortId}`);
+        attempts++;
       }
+
+      if (status !== "completed") {
+        throw new Error("GIF 生成がタイムアウトしました");
+      }
+
+      toast.success("作成しました！");
+      router.push(`/kinemoji/list?id=${shortId}`);
     } catch (error) {
-      toast.error("エラーが発生しました");
+      console.error("Registration error:", error);
+      toast.error(
+        error instanceof Error ? error.message : "エラーが発生しました",
+      );
     } finally {
       setIsLoading(false);
     }

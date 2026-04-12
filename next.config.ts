@@ -1,7 +1,18 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  async rewrites() {
+    return [
+      {
+        source: "/kinemoji/gif",
+        destination: "/api/kinemoji/gif",
+      },
+      {
+        source: "/kinemoji/status/:id",
+        destination: "/api/kinemoji/status/:id",
+      },
+    ];
+  },
 };
 
 export default nextConfig;

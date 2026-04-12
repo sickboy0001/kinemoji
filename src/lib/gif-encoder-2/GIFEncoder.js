@@ -6,26 +6,50 @@ const { OctreeQuant, Color } = require('./OctreeQuant')
 
 class ByteArray {
   constructor() {
-    this.data = []
+    this.initialSize = 1024 * 1024 // 1MB initial size
+    this.buffer = Buffer.allocUnsafe(this.initialSize)
+    this.pos = 0
+  }
+
+  _ensureCapacity(additional) {
+    if (this.pos + additional > this.buffer.length) {
+      let newSize = this.buffer.length * 2
+      while (this.pos + additional > newSize) {
+        newSize *= 2
+      }
+      const newBuffer = Buffer.allocUnsafe(newSize)
+      this.buffer.copy(newBuffer, 0, 0, this.pos)
+      this.buffer = newBuffer
+    }
   }
 
   getData() {
-    return Buffer.from(this.data)
+    return this.buffer.subarray(0, this.pos)
+  }
+
+  clear() {
+    this.pos = 0
   }
 
   writeByte(val) {
-    this.data.push(val)
+    this._ensureCapacity(1)
+    this.buffer[this.pos++] = val
   }
 
   writeUTFBytes(str) {
-    for (var len = str.length, i = 0; i < len; i++) {
-      this.writeByte(str.charCodeAt(i))
+    const len = str.length
+    this._ensureCapacity(len)
+    for (var i = 0; i < len; i++) {
+      this.buffer[this.pos++] = str.charCodeAt(i)
     }
   }
 
   writeBytes(array, offset, length) {
-    for (var len = length || array.length, i = offset || 0; i < len; i++) {
-      this.writeByte(array[i])
+    const len = length || array.length
+    const off = offset || 0
+    this._ensureCapacity(len)
+    for (var i = 0; i < len; i++) {
+      this.buffer[this.pos++] = array[off + i]
     }
   }
 }
@@ -75,11 +99,13 @@ class GIFEncoder extends EventEmitter {
     if (this.readStreams.length === 0) {
       return
     }
-    if (this.out.data.length) {
+    const data = this.out.getData()
+    if (data.length > 0) {
+      const dataCopy = Buffer.from(data)
       this.readStreams.forEach(rs => {
-        rs.push(Buffer.from(this.out.data))
+        rs.push(dataCopy)
       })
-      this.out.data = []
+      this.out.clear()
     }
   }
 

@@ -7,6 +7,7 @@ import { KinemojiDisplay } from "@/components/organisms/kinemoji-display";
 import { KinemojiCopyButtons } from "@/components/organisms/kinemoji-copy-buttons";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { ensureMillisecondTimestamp } from "@/lib/utils";
 
 async function fetchKinemojiById(id: string) {
   try {
@@ -21,9 +22,11 @@ async function fetchKinemojiById(id: string) {
       progress: data.progress ?? data.gif_progress ?? null,
       error: data.error || data.gif_error || null,
       createdAt: data.createdAt
-        ? new Date(data.createdAt).toISOString()
+        ? new Date(ensureMillisecondTimestamp(data.createdAt)).toISOString()
         : new Date().toISOString(),
-      updatedAt: data.updatedAt ? new Date(data.updatedAt).toISOString() : null,
+      updatedAt: data.updatedAt
+        ? new Date(ensureMillisecondTimestamp(data.updatedAt)).toISOString()
+        : null,
     };
   } catch (error) {
     console.error("Error fetching kinemoji:", error);
@@ -64,10 +67,14 @@ function KinemojiListContent() {
           const mappedData = data.map((item) => ({
             ...item,
             createdAt: item.createdAt
-              ? new Date(item.createdAt).toISOString()
+              ? new Date(
+                  ensureMillisecondTimestamp(item.createdAt),
+                ).toISOString()
               : new Date().toISOString(),
             updatedAt: item.updatedAt
-              ? new Date(item.updatedAt).toISOString()
+              ? new Date(
+                  ensureMillisecondTimestamp(item.updatedAt),
+                ).toISOString()
               : null,
           }));
           setList(mappedData);

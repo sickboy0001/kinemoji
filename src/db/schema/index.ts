@@ -3,6 +3,7 @@ import {
   text,
   integer,
   primaryKey,
+  index,
 } from "drizzle-orm/sqlite-core";
 
 export const users = sqliteTable("user", {
@@ -44,18 +45,24 @@ export const sessions = sqliteTable("session", {
   expires: integer("expires", { mode: "timestamp_ms" }).notNull(),
 });
 
-export const kinemojis = sqliteTable("kinemoji", {
-  id: text("id").notNull().primaryKey(),
-  shortId: text("short_id").notNull().unique(),
-  text: text("text").notNull(),
-  parameters: text("parameters"), // JSON 保存用
-  imageUrl: text("image_url"),
-  status: text("gif_status", {
-    enum: ["pending", "processing", "completed", "failed"],
-  }).default("pending"),
-  progress: integer("gif_progress").default(0),
-  error: text("gif_error"),
-  creatorId: text("creator_id"),
-  createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
-  updatedAt: integer("updated_at", { mode: "timestamp_ms" }),
-});
+export const kinemojis = sqliteTable(
+  "kinemojis",
+  {
+    id: text("id").notNull().primaryKey(),
+    shortId: text("short_id").notNull().unique(),
+    text: text("text").notNull(),
+    parameters: text("parameters").notNull(),
+    imageUrl: text("image_url"),
+    status: text("status").notNull().default("pending"),
+    progress: integer("progress").notNull().default(0),
+    error: text("error"),
+    creatorId: text("creator_id"),
+    createdAt: integer("created_at").notNull(),
+    updatedAt: integer("updated_at").notNull(),
+    type: text("type"),
+    action: text("action"),
+  },
+  (table) => ({
+    idxKinemojisShortId: index("idx_kinemojis_short_id").on(table.shortId),
+  }),
+);

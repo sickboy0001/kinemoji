@@ -2,6 +2,25 @@ import { db } from "@/lib/turso/db";
 import { kinemojis } from "@/db/schema";
 import { eq, desc, and } from "drizzle-orm";
 import { nanoid } from "nanoid";
+import { ensureMillisecondTimestamp } from "@/lib/utils";
+
+type KinemojiWithDate = Omit<
+  Awaited<ReturnType<typeof db.query.kinemojis.findMany>>[number],
+  "createdAt" | "updatedAt"
+> & {
+  createdAt: number;
+  updatedAt: number | null;
+};
+
+function mapKinemojiWithDates(item: any): KinemojiWithDate {
+  return {
+    ...item,
+    createdAt: ensureMillisecondTimestamp(item.createdAt),
+    updatedAt: item.updatedAt
+      ? ensureMillisecondTimestamp(item.updatedAt)
+      : null,
+  };
+}
 
 export const kinemojiService = {
   async getAll() {
@@ -9,24 +28,29 @@ export const kinemojiService = {
       orderBy: [desc(kinemojis.createdAt)],
       limit: 50,
     });
-    // console.log(
-    //   "All kinemojis from DB:",
-    //   results.map((k) => ({ id: k.id, hasUrl: !!k.imageUrl })),
-    // ); // デバッグログ
-    return results;
+    return results.map(mapKinemojiWithDates);
   },
 
   async getAllByCreator(creatorId: string) {
-    return await db.query.kinemojis.findMany({
+    const results = await db.query.kinemojis.findMany({
       where: eq(kinemojis.creatorId, creatorId),
       orderBy: [desc(kinemojis.createdAt)],
     });
+    return results.map(mapKinemojiWithDates);
   },
 
   async getByShortId(shortId: string) {
-    return await db.query.kinemojis.findFirst({
+    const result = await db.query.kinemojis.findFirst({
       where: eq(kinemojis.shortId, shortId),
     });
+    return result ? mapKinemojiWithDates(result) : null;
+  },
+
+  async getById(id: string) {
+    const result = await db.query.kinemojis.findFirst({
+      where: eq(kinemojis.id, id),
+    });
+    return result ? mapKinemojiWithDates(result) : null;
   },
 
   async create(
@@ -34,26 +58,29 @@ export const kinemojiService = {
     text: string,
     parameters?: any,
     imageUrl?: string,
+    id?: string,
   ) {
-    const id = crypto.randomUUID();
+    const targetId = id || crypto.randomUUID();
     const shortId = nanoid(10);
-    const now = new Date();
+    const now = Date.now();
     // imageUrl があれば completed、なければ pending
-    const status = imageUrl ? ("completed" as const) : ("pending" as const);
+    const status = imageUrl ? "completed" : "pending";
     const progress = imageUrl ? 100 : 0;
     const result = await db
       .insert(kinemojis)
       .values({
-        id,
+        id: targetId,
         shortId,
         text,
-        parameters: parameters ? JSON.stringify(parameters) : null,
+        parameters: JSON.stringify(parameters || {}),
         imageUrl,
         creatorId,
         createdAt: now,
         updatedAt: now,
         status,
         progress,
+        type: parameters?.type,
+        action: parameters?.action,
       })
       .returning();
     return result[0];
@@ -67,20 +94,25 @@ export const kinemojiService = {
 
   async updateStatus(
     id: string,
-    status: "pending" | "processing" | "completed" | "failed",
+    status: string,
     progress?: number,
     imageUrl?: string,
     error?: string,
+    type?: string,
+    action?: string,
   ) {
-    const updates: any = { status, updatedAt: new Date() };
+    const updates: any = { status, updatedAt: Date.now() };
     if (progress !== undefined) updates.progress = progress;
     if (imageUrl !== undefined) updates.imageUrl = imageUrl;
     if (error !== undefined) updates.error = error;
+    if (type !== undefined) updates.type = type;
+    if (action !== undefined) updates.action = action;
 
-    return await db
+    const result = await db
       .update(kinemojis)
       .set(updates)
       .where(eq(kinemojis.id, id))
       .returning();
+    return result[0] ? mapKinemojiWithDates(result[0]) : undefined;
   },
 };

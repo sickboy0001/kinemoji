@@ -47,12 +47,24 @@ export const KinemojiDisplay = ({
 
   const fontSize = useMemo(() => {
     if (!text.trim()) return 64;
+
+    // パラメータで指定された fontSize があればそれを優先的に検討するが、
+    // キャンバスサイズに収まるように自動調整も行う
+    const lines = text.split(/\r?\n/);
     const maxCharsInLine = Math.max(...lines.map((l) => l.length), 1);
     const lineCount = Math.max(lines.length, 1);
     const sizeByWidth = (canvasWidth / maxCharsInLine) * 0.8;
     const sizeByHeight = (canvasHeight / lineCount) * 0.7;
-    return Math.min(sizeByWidth, sizeByHeight, 200);
-  }, [text, canvasWidth, canvasHeight, lines]);
+
+    const autoSize = Math.min(sizeByWidth, sizeByHeight, 200);
+
+    // パラメータがあれば、それと自動計算の小さい方を採用する（はみ出し防止）
+    if (params.fontSize) {
+      return Math.min(params.fontSize, autoSize);
+    }
+
+    return autoSize;
+  }, [text, canvasWidth, canvasHeight, params.fontSize]);
 
   return (
     <div className="relative group">

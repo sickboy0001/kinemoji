@@ -65,10 +65,20 @@ export const LupinDisplay = ({
     };
 
     if (isRendering) {
-      // GIF生成時は、Playwrightのキャプチャ開始を待つために少し遅延させる
-      const delayTimer = setTimeout(startAnimation, 500);
+      // GIF 生成時は、即座にアニメーションを開始し、ループさせる
+      let charIdx = 0;
+      timer = setInterval(() => {
+        charIdx++;
+        if (charIdx < allChars.length) {
+          setHighlightIndex(charIdx);
+        } else {
+          // ループさせるために、最後から再度開始
+          charIdx = 0;
+          setHighlightIndex(charIdx);
+        }
+      }, STAGGER_MS);
+
       return () => {
-        clearTimeout(delayTimer);
         if (timer) clearInterval(timer);
       };
     } else {
@@ -118,30 +128,18 @@ export const LupinDisplay = ({
             className="flex flex-col items-center justify-center w-full h-full"
             style={{ gap: `${fontSize * 0.2}px` }}
           >
-            {lines.map((line, lineIndex) => (
+            {lines.map((line, i) => (
               <div
-                key={lineIndex}
-                className="flex justify-center"
+                key={i}
+                className="whitespace-nowrap"
                 style={{
-                  gap: `${fontSize * 0.1}px`,
-                  minHeight: line.length === 0 ? `${fontSize}px` : "auto",
+                  fontSize: `${fontSize}px`,
+                  color: foreColor,
+                  fontFamily: "var(--font-zen-old-mincho)",
+                  fontWeight: 300,
                 }}
               >
-                {line.split("").map((char, charIndex) => (
-                  <span
-                    key={`${lineIndex}-${charIndex}`}
-                    className="leading-none"
-                    style={{
-                      fontSize: `${fontSize}px`,
-                      color: foreColor,
-                      textShadow: `${fontSize * 0.05}px ${fontSize * 0.05}px ${fontSize * 0.1}px rgba(0,0,0,0.2)`,
-                      fontFamily: "var(--font-zen-old-mincho)",
-                      fontWeight: 300,
-                    }}
-                  >
-                    {char}
-                  </span>
-                ))}
+                {line}
               </div>
             ))}
           </motion.div>

@@ -23,21 +23,31 @@ function generateRandomId(length: number): string {
 
 export async function uploadKinemojiImage(formData: FormData) {
   try {
-    const base64Data = formData.get("image") as string;
-    if (!base64Data) {
+    // Blob または File オブジェクトを取得（"file" キーを使用）
+    const fileData = formData.get("file") as Blob | File;
+    if (!fileData) {
       return { success: false, error: "No image data provided" };
     }
-    // base64のヘッダーを削除
-    const base64Content = base64Data.replace(/^data:image\/\w+;base64,/, "");
-    const buffer = Buffer.from(base64Content, "base64");
 
-    // ファイル名生成: 日時(YYYYMMDD-HHmmss) + UUID7桁
+    // Blob を Buffer に変換
+    const arrayBuffer = await fileData.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+
+    // ファイル名生成：日時 (YYYYMMDD-HHmmss) + UUID7 桁
     const now = new Date();
     const timestamp = now.toISOString().replace(/[-T:]/g, "").split(".")[0];
-    const isGif = base64Data.startsWith("data:image/gif");
+
+    // MIME タイプの判定
+    const contentType = fileData.type || "image/gif";
+    const isGif = contentType.includes("gif");
     const extension = isGif ? "gif" : "png";
-    const contentType = isGif ? "image/gif" : "image/png";
-    const fileName = `${timestamp}-${generateRandomId(7)}.gif`;
+
+    // ファイル名の決定
+    const fileNameFromFormData =
+      fileData instanceof File ? fileData.name : undefined;
+    const fileName =
+      fileNameFromFormData ||
+      `${timestamp}-${generateRandomId(7)}.${extension}`;
 
     const command = new PutObjectCommand({
       Bucket: process.env.R2_BUCKET_NAME!,
