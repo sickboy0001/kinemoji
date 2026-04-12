@@ -1,3 +1,10 @@
+/* Google Fonts - Turbopack バグ回避のため CSS で直接読み込み */
+@import url("https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Hina+Mincho&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Zen+Old+Mincho&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Geist+Mono&display=swap");
+
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
@@ -13,9 +20,9 @@ body.rendering footer {
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-montserrat), var(--font-noto-sans-jp), var(--font-hina-mincho), sans-serif;
-  --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-montserrat), var(--font-noto-sans-jp), var(--font-hina-mincho), sans-serif;
+  --font-sans: "Montserrat", "Noto Sans JP", "Hina Mincho", sans-serif;
+  --font-mono: "Geist Mono", monospace;
+  --font-heading: "Montserrat", "Noto Sans JP", "Hina Mincho", sans-serif;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);

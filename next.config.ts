@@ -13,6 +13,9 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  // Turbopack 設定を空にすることで、webpack 設定との競合を回避
+  // Next.js 16 では Turbopack がデフォルトで有効
+  turbopack: {},
 };
 
 export default nextConfig;

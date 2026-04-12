@@ -36,7 +36,7 @@ async function main() {
         .set({
           status: "completed",
           progress: 100,
-          updatedAt: new Date(),
+          updatedAt: Date.now(),
         })
         .where(eq(kinemojis.id, record.id));
 

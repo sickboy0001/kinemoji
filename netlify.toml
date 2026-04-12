@@ -5,6 +5,10 @@ publish = ".next"
 [build.environment]
 NODE_VERSION = "20"
 NEXT_USE_NETLIFY_EDGE = "false"
+# Turbopack を無効化して従来の Webpack を使用（フォント関連のエラー回避）
+# Next.js 16 + Turbopack の既知のバグ：@vercel/turbopack-next/internal/font/google の解決失敗
+NEXT_PRIVATE_WEBPACK = "true"
+NEXT_TELEMETRY_DISABLED = "1"
 
 [[plugins]]
 package = "@netlify/plugin-nextjs"
