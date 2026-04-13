@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -12,6 +12,9 @@ import {
   AnimationType,
   AnimationAction,
 } from "@/components/organisms/kinemoji-display";
+
+// URL パラメータで受け付ける type の型（lupin, typewriter, zoom）
+type UrlAnimationType = "lupin" | "typewriter" | "zoom";
 
 const TYPE_OPTIONS: { value: AnimationType; label: string }[] = [
   { value: "direction", label: "移動 (Direction)" },
@@ -41,41 +44,59 @@ const LUPIN_ACTIONS: { value: AnimationAction; label: string }[] = [
   { value: "typewriter", label: "タイピング" },
 ];
 
-const WIDTHS = [
-  { value: 800, label: "800" },
-  { value: 400, label: "400" },
-  { value: 200, label: "200" },
-];
-
-const HEIGHT_RATIOS = [
-  { label: "1/4", ratio: 0.25 },
-  { label: "1/2", ratio: 0.5 },
-  { label: "2/3", ratio: 0.666 },
-  { label: "3/4", ratio: 0.75 },
-  { label: "1/1", ratio: 1 },
+// typewriter は lupin と同じアニメーション（lupin-display を使用）
+const TYPEWRITER_ACTIONS: { value: AnimationAction; label: string }[] = [
+  { value: "typewriter", label: "タイピング" },
 ];
 
 const COLOR_SETS = [
   { label: "黒地に白", foreColor: "#ffffff", backColor: "#000000" },
   { label: "白地に黒", foreColor: "#000000", backColor: "#ffffff" },
-  { label: "青地に白", foreColor: "#ffffff", backColor: "#1e40af" },
-  { label: "赤地に白", foreColor: "#ffffff", backColor: "#991b1b" },
 ];
 
 export function KinemojiNewPage() {
+  const searchParams = useSearchParams();
+  const urlType = searchParams.get("type");
+
+  // URL パラメータから初期値を設定
+  let initialType: AnimationType = "direction";
+  let initialAction: AnimationAction | undefined = undefined;
+
+  if (urlType === "lupin") {
+    initialType = "lupin";
+    initialAction = "typewriter";
+  } else if (urlType === "typewriter") {
+    // typewriter は lupin と同じアニメーションを使用
+    initialType = "lupin";
+    initialAction = "typewriter";
+  } else if (urlType === "zoom") {
+    initialType = "zoom";
+    initialAction = "in";
+  } else if (urlType === "direction") {
+    initialType = "direction";
+    initialAction = "down";
+  }
+
   const [text, setText] = useState("");
-  const [type, setType] = useState<AnimationType>("direction");
-  const [action, setAction] = useState<AnimationAction>("down");
-  const [width, setWidth] = useState(400);
-  const [height, setHeight] = useState(300);
+  const [type, setType] = useState<AnimationType>(initialType);
+  const [action, setAction] = useState<AnimationAction>(
+    initialAction ??
+      (initialType === "direction"
+        ? "down"
+        : initialType === "zoom"
+          ? "in"
+          : "typewriter") /* lupin */,
+  );
   const [foreColor, setForeColor] = useState("#ffffff");
   const [backColor, setBackColor] = useState("#000000");
   const [previewText, setPreviewText] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [scale, setScale] = useState(1);
-  const containerRef = useRef<HTMLDivElement>(null);
   const displayRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
+
+  // デフォルトサイズ
+  const width = 400;
+  const height = 300;
 
   const handleTypeChange = (newType: AnimationType) => {
     setType(newType);
@@ -89,24 +110,6 @@ export function KinemojiNewPage() {
       setAction("typewriter");
     }
   };
-
-  const handleRatioClick = (ratio: number) => {
-    setHeight(Math.round(width * ratio));
-  };
-
-  useEffect(() => {
-    const updateScale = () => {
-      if (containerRef.current) {
-        const containerWidth = containerRef.current.offsetWidth - 32;
-        const s = Math.min(1, containerWidth / width);
-        setScale(s);
-      }
-    };
-
-    updateScale();
-    window.addEventListener("resize", updateScale);
-    return () => window.removeEventListener("resize", updateScale);
-  }, [width, previewText]);
 
   const handlePreview = () => {
     if (!text.trim()) {
@@ -134,8 +137,6 @@ export function KinemojiNewPage() {
           parameters: {
             type,
             action,
-            width,
-            height,
             foreColor,
             backColor,
           },
@@ -197,13 +198,35 @@ export function KinemojiNewPage() {
 
   return (
     <div className="container mx-auto py-12 px-6">
-      <Card className="max-w-6xl mx-auto border-none shadow-none bg-transparent">
+      <div className="max-w-6xl mx-auto">
         <CardHeader className="px-0 pt-0 pb-8">
-          <CardTitle className="text-3xl font-bold tracking-tight">
-            Kinemoji を新しく作る
-          </CardTitle>
+          <div className="flex items-center gap-4">
+            <CardTitle className="text-3xl font-bold tracking-tight">
+              Kinemoji を新しく作る
+            </CardTitle>
+            <span className="text-sm font-semibold bg-neutral-100 px-3 py-1 rounded-full text-neutral-700 uppercase tracking-wider">
+              Type:{" "}
+              {urlType === "lupin"
+                ? "LUPIN"
+                : urlType === "typewriter"
+                  ? "TYPEWRITER"
+                  : urlType === "zoom"
+                    ? "ZOOM"
+                    : urlType === "direction"
+                      ? "DIRECTION"
+                      : type.toUpperCase()}
+            </span>
+          </div>
           <p className="text-neutral-500 mt-2">
-            アニメーションを選んで、あなただけのキネ文字を作成しましょう。
+            {urlType === "lupin"
+              ? "ルパンアニメーションでキネ文字を作成しましょう。"
+              : urlType === "typewriter"
+                ? "タイピングアニメーションでキネ文字を作成しましょう。"
+                : urlType === "zoom"
+                  ? "ズームアニメーションでキネ文字を作成しましょう。"
+                  : urlType === "direction"
+                    ? "移動アニメーションでキネ文字を作成しましょう。"
+                    : "あなただけのキネ文字を作成しましょう。"}
           </p>
         </CardHeader>
         <CardContent className="grid grid-cols-1 lg:grid-cols-2 gap-12 px-0">
@@ -223,25 +246,6 @@ export function KinemojiNewPage() {
                 maxLength={100}
                 className="min-h-[120px] resize-y rounded-xl border-neutral-200 focus:ring-orange-500 focus:border-orange-500 text-lg"
               />
-            </div>
-
-            <div className="space-y-3">
-              <Label className="text-sm font-semibold uppercase tracking-wider text-neutral-500">
-                アニメーション・タイプ
-              </Label>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                {TYPE_OPTIONS.map((opt) => (
-                  <Button
-                    key={opt.value}
-                    variant={type === opt.value ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => handleTypeChange(opt.value)}
-                    className={`w-full rounded-lg h-10 transition-all ${type === opt.value ? "bg-neutral-900 text-white shadow-md" : "border-neutral-200 hover:border-orange-500 hover:text-orange-600"}`}
-                  >
-                    {opt.label}
-                  </Button>
-                ))}
-              </div>
             </div>
 
             <div className="space-y-3">
@@ -267,14 +271,17 @@ export function KinemojiNewPage() {
                     {opt.label}
                   </Button>
                 ))}
-                <Button
-                  variant={action === "random" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setAction("random")}
-                  className={`w-full rounded-lg h-10 transition-all ${action === "random" ? "bg-neutral-900 text-white shadow-md" : "border-neutral-200 hover:border-orange-500 hover:text-orange-600"}`}
-                >
-                  ランダム
-                </Button>
+                {/* lupin/typewriter の場合はランダムボタンを表示しない */}
+                {type !== "lupin" && (
+                  <Button
+                    variant={action === "random" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setAction("random")}
+                    className={`w-full rounded-lg h-10 transition-all ${action === "random" ? "bg-neutral-900 text-white shadow-md" : "border-neutral-200 hover:border-orange-500 hover:text-orange-600"}`}
+                  >
+                    ランダム
+                  </Button>
+                )}
               </div>
             </div>
 
@@ -308,67 +315,7 @@ export function KinemojiNewPage() {
               </div>
             </div>
 
-            <div className="space-y-6 pt-6 border-t border-neutral-100">
-              <div className="space-y-3">
-                <Label className="text-sm font-semibold uppercase tracking-wider text-neutral-500">
-                  キャンバスの幅 (Width)
-                </Label>
-                <div className="grid grid-cols-4 gap-3">
-                  {WIDTHS.map((w) => (
-                    <Button
-                      key={w.value}
-                      variant={width === w.value ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setWidth(w.value)}
-                      className={`w-full rounded-lg h-10 transition-all ${width === w.value ? "bg-neutral-900 text-white shadow-md" : "border-neutral-200 hover:border-orange-500 hover:text-orange-600"}`}
-                    >
-                      {w.label}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                <Label className="text-sm font-semibold uppercase tracking-wider text-neutral-500">
-                  高さの比率
-                </Label>
-                <div className="grid grid-cols-5 gap-3">
-                  {HEIGHT_RATIOS.map((r) => (
-                    <Button
-                      key={r.label}
-                      variant={
-                        Math.abs(height / width - r.ratio) < 0.01
-                          ? "default"
-                          : "outline"
-                      }
-                      size="sm"
-                      onClick={() => handleRatioClick(r.ratio)}
-                      className={`w-full px-0 rounded-lg h-10 transition-all ${Math.abs(height / width - r.ratio) < 0.01 ? "bg-neutral-900 text-white shadow-md" : "border-neutral-200 hover:border-orange-500 hover:text-orange-600"}`}
-                    >
-                      {r.label}
-                    </Button>
-                  ))}
-                </div>
-                <div className="flex items-center gap-6 mt-4 p-4 bg-neutral-50 rounded-xl border border-neutral-100">
-                  <div className="flex-1 space-y-2">
-                    <Label className="text-[10px] font-bold uppercase text-neutral-400">
-                      高さ直接指定 (px)
-                    </Label>
-                    <input
-                      type="number"
-                      value={height}
-                      onChange={(e) => setHeight(Number(e.target.value))}
-                      className="w-full h-10 rounded-lg border border-neutral-200 bg-white px-3 py-1 text-sm shadow-sm transition-all focus:ring-2 focus:ring-orange-500 focus:outline-none"
-                    />
-                  </div>
-                  <div className="pt-6 font-mono text-xl font-bold text-neutral-900">
-                    {width} <span className="text-neutral-300">×</span> {height}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-3 pt-4">
+            <div className="flex justify-end gap-3 pt-6 border-t border-neutral-100">
               <Button
                 variant="secondary"
                 onClick={handlePreview}
@@ -387,46 +334,33 @@ export function KinemojiNewPage() {
             </Button>
           </div>
 
-          <div className="space-y-6" ref={containerRef}>
+          <div className="space-y-6">
             <div className="flex items-center justify-between">
               <Label className="text-sm font-semibold uppercase tracking-wider text-neutral-500">
-                リアルタイムプレビュー
+                プレビュー
               </Label>
-              <span className="text-[10px] font-bold bg-neutral-100 px-2 py-1 rounded-full text-neutral-500 uppercase">
-                Zoom: {Math.round(scale * 100)}%
-              </span>
             </div>
             <div className="bg-neutral-100 rounded-3xl flex items-start justify-center min-h-[500px] border-2 border-dashed border-neutral-200 overflow-hidden p-8 shadow-inner">
               {previewText ? (
                 <div
-                  className="flex items-center justify-center origin-top transition-transform duration-500 ease-out"
+                  ref={displayRef}
+                  className="shadow-2xl rounded-sm overflow-hidden ring-8 ring-white/50"
                   style={{
-                    transform: `scale(${scale})`,
                     width: `${width}px`,
                     height: `${height}px`,
                   }}
                 >
-                  <div
-                    key={`${previewText}-${type}-${action}-${width}-${height}-${foreColor}-${backColor}`}
-                    ref={displayRef}
-                    className="shadow-2xl rounded-sm overflow-hidden ring-8 ring-white/50"
-                    style={{
-                      width: `${width}px`,
-                      height: `${height}px`,
+                  <KinemojiDisplay
+                    text={previewText}
+                    parameters={{
+                      type,
+                      action,
+                      width,
+                      height,
+                      foreColor,
+                      backColor,
                     }}
-                  >
-                    <KinemojiDisplay
-                      text={previewText}
-                      parameters={{
-                        type,
-                        action,
-                        width,
-                        height,
-                        foreColor,
-                        backColor,
-                      }}
-                    />
-                  </div>
+                  />
                 </div>
               ) : (
                 <div className="h-[400px] flex flex-col items-center justify-center gap-4 text-center">
@@ -453,7 +387,7 @@ export function KinemojiNewPage() {
             </div>
           </div>
         </CardContent>
-      </Card>
+      </div>
     </div>
   );
 }

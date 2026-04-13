@@ -9,12 +9,29 @@ export default function HomePage() {
         あなたの言葉を、アニメーションする「キネ文字」に。
         リアルタイムな演出として、あるいはGIFとして。
       </p>
-      <div className="flex gap-4">
-        <Link href="/kinemoji/new">
-          <Button size="lg" className="px-8 cursor-pointer">
-            使ってみる
+      <div className="grid grid-cols-2 gap-4 mb-8">
+        <Link href="/kinemoji/new?type=lupin">
+          <Button size="lg" className="w-full px-8 cursor-pointer">
+            ルパン (Lupin)
           </Button>
         </Link>
+        <Link href="/kinemoji/new?type=typewriter">
+          <Button size="lg" className="w-full px-8 cursor-pointer">
+            タイピング (Typewriter)
+          </Button>
+        </Link>
+        <Link href="/kinemoji/new?type=zoom">
+          <Button size="lg" className="w-full px-8 cursor-pointer">
+            ズーム (Zoom)
+          </Button>
+        </Link>
+        <Link href="/kinemoji/new?type=direction">
+          <Button size="lg" className="w-full px-8 cursor-pointer">
+            移動 (Direction)
+          </Button>
+        </Link>
+      </div>
+      <div className="flex gap-4">
         <Link href="/kinemoji/list">
           <Button variant="outline" size="lg" className="px-8 cursor-pointer">
             一覧を見る
