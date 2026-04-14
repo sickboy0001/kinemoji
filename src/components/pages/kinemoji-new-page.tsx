@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -66,9 +67,9 @@ export function KinemojiNewPage() {
     initialType = "lupin";
     initialAction = "typewriter";
   } else if (urlType === "typewriter") {
-    // typewriter は lupin と同じアニメーションを使用
-    initialType = "lupin";
-    initialAction = "typewriter";
+    // typewriter は独立した型として扱う（lupin-display を使用）
+    initialType = "typewriter";
+    initialAction = "fade";
   } else if (urlType === "zoom") {
     initialType = "zoom";
     initialAction = "in";
@@ -106,8 +107,10 @@ export function KinemojiNewPage() {
       setAction("in");
     } else if (newType === "opacity") {
       setAction("fade");
-    } else {
+    } else if (newType === "lupin") {
       setAction("typewriter");
+    } else if (newType === "typewriter") {
+      setAction("fade");
     }
   };
 
@@ -125,7 +128,13 @@ export function KinemojiNewPage() {
       toast.error("文字列を入力してください");
       return;
     }
-
+    console.log("Registering new Kinemoji with parameters:", {
+      text,
+      type,
+      action,
+      foreColor,
+      backColor,
+    });
     setIsLoading(true);
     try {
       // 直接 GIF 生成 API を叩く（データの登録も外部 API 側で行われる）
@@ -151,41 +160,43 @@ export function KinemojiNewPage() {
       console.log("GIF generation started:", { id });
 
       // ポーリングで完了を待つ（最大 120 秒）
-      let status = "pending";
-      let shortId = "";
-      let attempts = 0;
-      const maxAttempts = 60; // 2 秒間隔で 120 秒
+      // 一覧側の画面で待つこととするの以下の処理は不要
 
-      while (
-        (status === "pending" || status === "processing") &&
-        attempts < maxAttempts
-      ) {
-        await new Promise((resolve) => setTimeout(resolve, 2000)); // 2 秒待機
+      // let status = "pending";
+      // let shortId = "";
+      // let attempts = 0;
+      // const maxAttempts = 60; // 2 秒間隔で 120 秒
 
-        const statusResponse = await fetch(`/kinemoji/status/${id}`);
-        if (statusResponse.ok) {
-          const data = await statusResponse.json();
-          status = data.status;
-          // shortId が取得できれば保存（完了後の遷移に使用）
-          // API のレスポンスに shortId が含まれていない場合は id をそのまま使う
-          shortId = data.shortId || data.id;
+      // while (
+      //   (status === "pending" || status === "processing") &&
+      //   attempts < maxAttempts
+      // ) {
+      //   await new Promise((resolve) => setTimeout(resolve, 2000)); // 2 秒待機
 
-          if (status === "completed") {
-            break;
-          }
-          if (status === "failed") {
-            throw new Error(data.error || "GIF 生成に失敗しました");
-          }
-        }
-        attempts++;
-      }
+      //   const statusResponse = await fetch(`/kinemoji/status/${id}`);
+      //   if (statusResponse.ok) {
+      //     const data = await statusResponse.json();
+      //     status = data.status;
+      //     // shortId が取得できれば保存（完了後の遷移に使用）
+      //     // API のレスポンスに shortId が含まれていない場合は id をそのまま使う
+      //     shortId = data.shortId || data.id;
 
-      if (status !== "completed") {
-        throw new Error("GIF 生成がタイムアウトしました");
-      }
+      //     if (status === "completed") {
+      //       break;
+      //     }
+      //     if (status === "failed") {
+      //       throw new Error(data.error || "GIF 生成に失敗しました");
+      //     }
+      //   }
+      //   attempts++;
+      // }
 
-      toast.success("作成しました！");
-      router.push(`/kinemoji/list?id=${shortId}`);
+      // if (status !== "completed") {
+      //   throw new Error("GIF 生成がタイムアウトしました");
+      // }
+
+      toast.success("作成開始！");
+      router.push(`/kinemoji/list?id=${id}`);
     } catch (error) {
       console.error("Registration error:", error);
       toast.error(
@@ -216,6 +227,14 @@ export function KinemojiNewPage() {
                       ? "DIRECTION"
                       : type.toUpperCase()}
             </span>
+            <Link href={`/kinemoji/list${urlType ? `?type=${urlType}` : ""}`}>
+              <Button
+                size="sm"
+                className="rounded-full bg-orange-600 hover:bg-orange-700 font-bold text-base"
+              >
+                Gallery
+              </Button>
+            </Link>
           </div>
           <p className="text-neutral-500 mt-2">
             {urlType === "lupin"
@@ -248,31 +267,31 @@ export function KinemojiNewPage() {
               />
             </div>
 
-            <div className="space-y-3">
-              <Label className="text-sm font-semibold uppercase tracking-wider text-neutral-500">
-                アクション
-              </Label>
-              <div className="grid grid-cols-2 gap-3">
-                {(type === "direction"
-                  ? DIRECTION_ACTIONS
-                  : type === "zoom"
-                    ? ZOOM_ACTIONS
-                    : type === "opacity"
-                      ? OPACITY_ACTIONS
-                      : LUPIN_ACTIONS
-                ).map((opt) => (
-                  <Button
-                    key={opt.value}
-                    variant={action === opt.value ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setAction(opt.value)}
-                    className={`w-full rounded-lg h-10 transition-all ${action === opt.value ? "bg-neutral-900 text-white shadow-md" : "border-neutral-200 hover:border-orange-500 hover:text-orange-600"}`}
-                  >
-                    {opt.label}
-                  </Button>
-                ))}
-                {/* lupin/typewriter の場合はランダムボタンを表示しない */}
-                {type !== "lupin" && (
+            {/* lupin/typewriter の場合はアクション選択を表示しない */}
+            {type !== "lupin" && type !== "typewriter" && (
+              <div className="space-y-3">
+                <Label className="text-sm font-semibold uppercase tracking-wider text-neutral-500">
+                  アクション
+                </Label>
+                <div className="grid grid-cols-2 gap-3">
+                  {(type === "direction"
+                    ? DIRECTION_ACTIONS
+                    : type === "zoom"
+                      ? ZOOM_ACTIONS
+                      : type === "opacity"
+                        ? OPACITY_ACTIONS
+                        : []
+                  ).map((opt) => (
+                    <Button
+                      key={opt.value}
+                      variant={action === opt.value ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setAction(opt.value)}
+                      className={`w-full rounded-lg h-10 transition-all ${action === opt.value ? "bg-neutral-900 text-white shadow-md" : "border-neutral-200 hover:border-orange-500 hover:text-orange-600"}`}
+                    >
+                      {opt.label}
+                    </Button>
+                  ))}
                   <Button
                     variant={action === "random" ? "default" : "outline"}
                     size="sm"
@@ -281,9 +300,9 @@ export function KinemojiNewPage() {
                   >
                     ランダム
                   </Button>
-                )}
+                </div>
               </div>
-            </div>
+            )}
 
             <div className="space-y-3">
               <Label className="text-sm font-semibold uppercase tracking-wider text-neutral-500">
@@ -330,7 +349,7 @@ export function KinemojiNewPage() {
               onClick={handleRegister}
               disabled={isLoading || !text.trim()}
             >
-              {isLoading ? "処理中..." : "Kinemoji を保存する"}
+              {isLoading ? "処理中..." : "Kinemoji を作成する"}
             </Button>
           </div>
 

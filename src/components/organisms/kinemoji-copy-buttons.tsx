@@ -40,7 +40,7 @@ export function KinemojiCopyButtons({
   const shareUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/kinemoji/${shortId}`;
 
   const handleXPost = () => {
-    const xText = encodeURIComponent(`${text}\n#キネ文字 #kinemoji`);
+    const xText = encodeURIComponent(`${text}\n#kinemoji`);
     const xUrl = encodeURIComponent(shareUrl);
     window.open(
       `https://x.com/intent/post?text=${xText}&url=${xUrl}`,
@@ -71,15 +71,6 @@ export function KinemojiCopyButtons({
         </Button>
       </div>
 
-      <Button
-        variant="default"
-        className="bg-neutral-900 hover:bg-neutral-800 text-white flex items-center gap-2 rounded-lg px-4 font-bold text-xs h-9 shadow-md transition-transform active:scale-95"
-        onClick={handleXPost}
-      >
-        <Send className="h-4 w-4" />
-        Xにポスト
-      </Button>
-
       {imageUrl && (
         <div className="flex items-center gap-1 group">
           <Button
@@ -102,6 +93,14 @@ export function KinemojiCopyButtons({
           </Button>
         </div>
       )}
+      <Button
+        variant="default"
+        className="bg-neutral-900 hover:bg-neutral-800 text-white flex items-center gap-2 rounded-lg px-4 font-bold text-xs h-9 shadow-md transition-transform active:scale-95"
+        onClick={handleXPost}
+      >
+        <Send className="h-4 w-4" />
+        Xにポスト
+      </Button>
     </div>
   );
 }

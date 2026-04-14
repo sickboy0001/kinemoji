@@ -1,4 +1,9 @@
-export type AnimationType = "direction" | "zoom" | "opacity" | "lupin";
+export type AnimationType =
+  | "direction"
+  | "zoom"
+  | "opacity"
+  | "lupin"
+  | "typewriter";
 
 export type AnimationAction =
   | "down"

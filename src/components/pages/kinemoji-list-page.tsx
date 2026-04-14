@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useState, Suspense, useRef } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ExternalLink } from "lucide-react";
 import { KinemojiDisplay } from "@/components/organisms/kinemoji-display";
 import { KinemojiCopyButtons } from "@/components/organisms/kinemoji-copy-buttons";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { HOME_KINEMOJI_TYPES } from "@/constants/kinemoji-types";
 import { ensureMillisecondTimestamp } from "@/lib/utils";
 
 async function fetchKinemojiById(id: string) {
@@ -55,6 +57,7 @@ function KinemojiListContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const targetId = searchParams.get("id");
+  const filterType = searchParams.get("type"); // type パラメータを取得
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
 
   // リストの取得
@@ -77,22 +80,36 @@ function KinemojiListContent() {
                 ).toISOString()
               : null,
           }));
-          setList(mappedData);
+
+          // type パラメータがある場合はフィルタリング
+          const filteredData = filterType
+            ? mappedData.filter((item) => {
+                if (!item.parameters) return false;
+                try {
+                  const params = JSON.parse(item.parameters);
+                  return params.type === filterType;
+                } catch {
+                  return false;
+                }
+              })
+            : mappedData;
+
+          setList(filteredData);
 
           if (targetId) {
-            const found = mappedData.find((item) => item.id === targetId);
+            const found = filteredData.find((item) => item.id === targetId);
             if (found) {
               setSelected(found);
               return;
             }
           }
 
-          if (mappedData.length > 0 && !selected) {
-            setSelected(mappedData[0]);
+          if (filteredData.length > 0 && !selected) {
+            setSelected(filteredData[0]);
           }
         }
       });
-  }, [targetId]);
+  }, [targetId, filterType]);
 
   // 選択されたアイテムのポーリング（GIF 生成状況の更新）
   useEffect(() => {
@@ -158,17 +175,62 @@ function KinemojiListContent() {
   return (
     <div className="container mx-auto py-12 flex flex-col md:flex-row gap-12 px-6">
       <div className="w-full md:w-80 space-y-8">
-        <div className="flex flex-col gap-4">
+        <div className="flex items-center gap-4">
           <h2 className="text-4xl font-black tracking-tighter uppercase">
             Gallery
           </h2>
           <Button
             variant="default"
-            onClick={() => router.push("/kinemoji/new")}
-            className="w-full bg-orange-600 hover:bg-orange-700 text-white rounded-xl py-6 font-bold shadow-lg shadow-orange-100"
+            onClick={() => {
+              const type = filterType || "typewriter";
+              router.push(`/kinemoji/new?type=${type}`);
+            }}
+            className="bg-orange-600 hover:bg-orange-700 text-white rounded-full font-bold text-base shadow-lg shadow-orange-100 h-10"
           >
             新規作成
           </Button>
+        </div>
+        <div className="inline-flex rounded-full border border-neutral-200 overflow-hidden">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              const params = new URLSearchParams(searchParams.toString());
+              params.delete("type");
+              router.push(
+                `/kinemoji/list${params.toString() ? `?${params.toString()}` : ""}`,
+              );
+            }}
+            className={`rounded-none h-9 px-4 border-r border-neutral-200  font-bold ${
+              !filterType
+                ? "bg-neutral-100 text-neutral-900"
+                : "bg-white text-neutral-600 hover:bg-neutral-50"
+            }`}
+          >
+            All
+          </Button>
+          {HOME_KINEMOJI_TYPES.map((kinemojiType, index) => (
+            <Link
+              key={kinemojiType.type}
+              href={`/kinemoji/list?type=${kinemojiType.type}`}
+            >
+              <Button
+                variant="ghost"
+                size="sm"
+                className={`rounded-none h-9 px-4 font-bold ${
+                  index < HOME_KINEMOJI_TYPES.length - 1
+                    ? "border-r border-neutral-200"
+                    : ""
+                } ${
+                  filterType === kinemojiType.type
+                    ? "bg-neutral-100 text-neutral-900"
+                    : "bg-white text-neutral-600 hover:bg-neutral-50"
+                }`}
+              >
+                {kinemojiType.type}
+              </Button>
+            </Link>
+          ))}
         </div>
         <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-3 custom-scrollbar">
           {list.map((item) => (
@@ -186,7 +248,10 @@ function KinemojiListContent() {
               </p>
               <div className="flex items-center justify-between mt-2 opacity-60 group-hover:opacity-100 transition-opacity">
                 <p className="text-[10px] font-medium uppercase tracking-widest">
-                  {new Date(item.createdAt).toLocaleDateString()}
+                  {(() => {
+                    const date = new Date(item.createdAt);
+                    return `${date.toLocaleDateString()} ${date.getHours().toString().padStart(2, "0")}:${date.getMinutes().toString().padStart(2, "0")}`;
+                  })()}
                 </p>
                 <div className="w-1.5 h-1.5 rounded-full bg-orange-500" />
               </div>

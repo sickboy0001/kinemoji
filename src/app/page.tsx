@@ -1,5 +1,9 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import {
+  HOME_KINEMOJI_TYPES,
+  KINEMOJI_NEW_PATH,
+} from "@/constants/kinemoji-types";
 
 export default function HomePage() {
   return (
@@ -7,36 +11,19 @@ export default function HomePage() {
       <h1 className="text-6xl font-bold mb-6">Kinemoji</h1>
       <p className="text-xl text-slate-600 mb-10 max-w-md">
         あなたの言葉を、アニメーションする「キネ文字」に。
-        リアルタイムな演出として、あるいはGIFとして。
+        リアルタイムな演出として、あるいは GIF として。
       </p>
       <div className="grid grid-cols-2 gap-4 mb-8">
-        <Link href="/kinemoji/new?type=lupin">
-          <Button size="lg" className="w-full px-8 cursor-pointer">
-            ルパン (Lupin)
-          </Button>
-        </Link>
-        <Link href="/kinemoji/new?type=typewriter">
-          <Button size="lg" className="w-full px-8 cursor-pointer">
-            タイピング (Typewriter)
-          </Button>
-        </Link>
-        <Link href="/kinemoji/new?type=zoom">
-          <Button size="lg" className="w-full px-8 cursor-pointer">
-            ズーム (Zoom)
-          </Button>
-        </Link>
-        <Link href="/kinemoji/new?type=direction">
-          <Button size="lg" className="w-full px-8 cursor-pointer">
-            移動 (Direction)
-          </Button>
-        </Link>
-      </div>
-      <div className="flex gap-4">
-        <Link href="/kinemoji/list">
-          <Button variant="outline" size="lg" className="px-8 cursor-pointer">
-            一覧を見る
-          </Button>
-        </Link>
+        {HOME_KINEMOJI_TYPES.map((kinemojiType) => (
+          <Link
+            key={kinemojiType.type}
+            href={`${KINEMOJI_NEW_PATH}?type=${kinemojiType.type}`}
+          >
+            <Button size="lg" className="w-full px-8 cursor-pointer">
+              {kinemojiType.label}
+            </Button>
+          </Link>
+        ))}
       </div>
     </div>
   );

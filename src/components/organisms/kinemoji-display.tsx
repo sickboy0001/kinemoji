@@ -8,6 +8,7 @@ import {
 } from "./kinemoji/types";
 import { LupinDisplay } from "./kinemoji/lupin-display";
 import { StandardDisplay } from "./kinemoji/standard-display";
+import { TypewriterDisplay } from "./kinemoji/typewriter-display";
 
 export type { AnimationType, AnimationAction };
 
@@ -71,6 +72,17 @@ export const KinemojiDisplay = ({
       <div ref={containerRef}>
         {type === "lupin" ? (
           <LupinDisplay
+            text={text}
+            lines={lines}
+            canvasWidth={canvasWidth}
+            canvasHeight={canvasHeight}
+            fontSize={fontSize}
+            foreColor={foreColor}
+            backColor={backColor}
+            isRendering={isRendering}
+          />
+        ) : type === "typewriter" ? (
+          <TypewriterDisplay
             text={text}
             lines={lines}
             canvasWidth={canvasWidth}

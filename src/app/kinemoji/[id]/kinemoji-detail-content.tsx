@@ -1,6 +1,7 @@
 "use client";
 
 import { KinemojiDisplay } from "@/components/organisms/kinemoji-display";
+import { KinemojiCopyButtons } from "@/components/organisms/kinemoji-copy-buttons";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 
@@ -89,48 +90,67 @@ export function KinemojiDetailContent({ id }: KinemojiDetailContentProps) {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-neutral-50 p-6 md:p-12">
-      <div className="bg-white p-2 rounded-2xl shadow-2xl border border-neutral-100 overflow-hidden">
-        {kinemoji.imageUrl &&
-        (kinemoji.status === "completed" || kinemoji.status === null) ? (
-          <img
-            src={kinemoji.imageUrl}
-            alt={kinemoji.text}
-            className="max-w-full h-auto"
-          />
-        ) : kinemoji.status === "processing" ? (
-          <div className="text-center p-8">
-            <p className="text-lg font-medium mb-4">GIF 生成中...</p>
-            <div className="w-full bg-neutral-200 rounded-full h-4 mb-4">
-              <div
-                className="bg-orange-500 h-4 rounded-full transition-all"
-                style={{ width: `${kinemoji.progress || 0}%` }}
+      <div className="bg-white p-6 md:p-8 rounded-2xl shadow-2xl border border-neutral-100 overflow-hidden max-w-2xl w-full">
+        {/* Title */}
+        <h1 className="text-2xl md:text-3xl font-bold text-center text-neutral-800 mb-2">
+          {kinemoji.text}
+        </h1>
+        {/* Description */}
+        <p className="text-center text-neutral-500 mb-6">kimemoji</p>
+        <div className="bg-white p-2 rounded-2xl shadow-inner border border-neutral-100 overflow-hidden">
+          {kinemoji.imageUrl &&
+          (kinemoji.status === "completed" || kinemoji.status === null) ? (
+            <>
+              <img
+                src={kinemoji.imageUrl}
+                alt={kinemoji.text}
+                className="max-w-full h-auto"
               />
+              <div className="mt-4">
+                <KinemojiCopyButtons
+                  shortId={kinemoji.shortId}
+                  text={kinemoji.text}
+                  imageUrl={kinemoji.imageUrl}
+                />
+              </div>
+            </>
+          ) : kinemoji.status === "processing" ? (
+            <div className="text-center p-8">
+              <p className="text-lg font-medium mb-4">GIF 生成中...</p>
+              <div className="w-full bg-neutral-200 rounded-full h-4 mb-4">
+                <div
+                  className="bg-orange-500 h-4 rounded-full transition-all"
+                  style={{ width: `${kinemoji.progress || 0}%` }}
+                />
+              </div>
+              <p className="text-sm text-neutral-500">
+                {kinemoji.progress || 0}%
+              </p>
             </div>
-            <p className="text-sm text-neutral-500">
-              {kinemoji.progress || 0}%
-            </p>
-          </div>
-        ) : kinemoji.status === "pending" ? (
-          <div className="text-center p-8">
-            <p className="text-lg font-medium mb-4">GIF 生成待ち...</p>
-            <Button onClick={() => window.location.reload()}>再試行</Button>
-          </div>
-        ) : kinemoji.status === "failed" ? (
-          <div className="text-center p-8">
-            <p className="text-lg font-medium mb-4 text-red-500">
-              GIF 生成に失敗しました
-            </p>
-            {kinemoji.error && (
-              <p className="text-sm text-neutral-500 mb-4">{kinemoji.error}</p>
-            )}
-            <Button onClick={() => window.location.reload()}>再試行</Button>
-          </div>
-        ) : (
-          <KinemojiDisplay
-            text={kinemoji.text}
-            parameters={kinemoji.parameters || undefined}
-          />
-        )}
+          ) : kinemoji.status === "pending" ? (
+            <div className="text-center p-8">
+              <p className="text-lg font-medium mb-4">GIF 生成待ち...</p>
+              <Button onClick={() => window.location.reload()}>再試行</Button>
+            </div>
+          ) : kinemoji.status === "failed" ? (
+            <div className="text-center p-8">
+              <p className="text-lg font-medium mb-4 text-red-500">
+                GIF 生成に失敗しました
+              </p>
+              {kinemoji.error && (
+                <p className="text-sm text-neutral-500 mb-4">
+                  {kinemoji.error}
+                </p>
+              )}
+              <Button onClick={() => window.location.reload()}>再試行</Button>
+            </div>
+          ) : (
+            <KinemojiDisplay
+              text={kinemoji.text}
+              parameters={kinemoji.parameters || undefined}
+            />
+          )}
+        </div>
       </div>
     </div>
   );

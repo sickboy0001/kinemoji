@@ -18,6 +18,7 @@ export async function generateAndUploadGif(
   shortId: string,
 ) {
   const { text, type, action, width, height, foreColor, backColor } = params;
+  console.log("Starting GIF generation with parameters:", params);
 
   const isServerless =
     !!(process.env.NETLIFY || process.env.VERCEL) &&

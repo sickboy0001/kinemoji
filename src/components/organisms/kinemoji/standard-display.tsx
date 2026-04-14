@@ -36,6 +36,7 @@ export const StandardDisplay = ({
   backColor,
   isRendering = false,
 }: StandardDisplayProps) => {
+  console.log("Rendering StandardDisplay with type:", type, "action:", action);
   const charConfigs = useMemo(() => {
     let globalIndex = 0;
     return lines.map((line) =>

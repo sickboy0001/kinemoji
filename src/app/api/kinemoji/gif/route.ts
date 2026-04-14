@@ -15,6 +15,7 @@ export async function POST(req: Request) {
     // UI から parameters がフラットに送られてくる場合と、
     // オブジェクトとして送られてくる場合の両方に対応
     const parameters = body.parameters || body;
+    // console.log("Received parameters:", parameters);
 
     if (!text) {
       return NextResponse.json({ error: "Text is required" }, { status: 400 });
