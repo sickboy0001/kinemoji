@@ -13,8 +13,8 @@ export async function generateMetadata({
 
   if (!kinemoji) return {};
 
-  const title = `${kinemoji.text} | キネ文字`;
-  const description = "動くキネ文字を作成しました。";
+  const title = `${kinemoji.text} `;
+  const description = "kimemoji";
   const imageUrl = kinemoji.imageUrl;
 
   return {

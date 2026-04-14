@@ -67,7 +67,6 @@ export async function POST(req: Request) {
     });
 
     console.log("External API response status:", externalResponse.status);
-
     if (!externalResponse.ok) {
       const errorText = await externalResponse.text();
       console.error("External API error response:", errorText);
