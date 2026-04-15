@@ -13,6 +13,10 @@ export const users = sqliteTable("user", {
   emailVerified: integer("emailVerified", { mode: "timestamp_ms" }),
   image: text("image"),
   role: text("role", { enum: ["user", "admin"] }).default("user"),
+  // Google OAuth 用カラム（仕様書に基づく）
+  googleId: text("google_id").unique(), // Google 固有 ID（sub クレーム）
+  displayName: text("display_name"), // 表示名（Google 名または自動生成）
+  isAdmin: integer("is_admin", { mode: "boolean" }).default(false), // 管理者フラグ
 });
 
 export const accounts = sqliteTable(

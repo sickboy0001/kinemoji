@@ -7,21 +7,37 @@ import { ToastContainer } from "@/components/ui/toast";
 
 export const metadata: Metadata = {
   title: "kinemoji - ウゴクモジ",
-  description: "文字を動かすGif作成サービスです。",
+  description: "文字を動かす Gif 作成サービスです。",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // 認証周りは将来的に使用するため、現在はダミー値を渡す
+  // 認証機能は現在無効化されています
   const session = null;
+
+  const handleSignIn = async () => {
+    "use server";
+    // Google ログインは現在無効化されています
+    console.log("Sign in not implemented");
+  };
+
+  const handleSignOut = async () => {
+    "use server";
+    // ログアウトは現在無効化されています
+    console.log("Sign out not implemented");
+  };
 
   return (
     <html lang="ja">
       <body className="antialiased min-h-screen flex flex-col font-sans font-bold">
-        <Navigation session={session}>
+        <Navigation
+          session={session}
+          signInAction={handleSignIn}
+          signOutAction={handleSignOut}
+        >
           {/* Main Content */}
           <main className="flex-1 bg-white">{children}</main>
         </Navigation>
