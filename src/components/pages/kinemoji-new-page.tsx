@@ -251,12 +251,19 @@ export function KinemojiNewPage() {
         <CardContent className="grid grid-cols-1 lg:grid-cols-2 gap-12 px-0">
           <div className="space-y-8">
             <div className="space-y-3">
-              <Label
-                htmlFor="text"
-                className="text-sm font-semibold uppercase tracking-wider text-neutral-500"
-              >
-                表示する文字列
-              </Label>
+              <div className="flex justify-between items-end">
+                <Label
+                  htmlFor="text"
+                  className="text-sm font-semibold uppercase tracking-wider text-neutral-500"
+                >
+                  表示する文字列
+                </Label>
+                <span
+                  className={`text-xs font-medium ${text.length >= 100 ? "text-red-500" : "text-neutral-400"}`}
+                >
+                  {text.length} / 100
+                </span>
+              </div>
               <Textarea
                 id="text"
                 placeholder="一行目&#10;二行目"
@@ -349,7 +356,7 @@ export function KinemojiNewPage() {
               onClick={handleRegister}
               disabled={isLoading || !text.trim()}
             >
-              {isLoading ? "処理中..." : "Kinemoji を作成する"}
+              {isLoading ? "処理中..." : "Kinemoji を作成開始する"}
             </Button>
           </div>
 
@@ -399,9 +406,7 @@ export function KinemojiNewPage() {
                 Pro Tip:
               </h4>
               <p className="text-orange-800 text-xs leading-relaxed">
-                GIF
-                生成には少し時間がかかる場合があります。生成中はページを閉じないでお待ちください。
-                背景色と文字色のコントラストを高くすると、より印象的な仕上がりになります。
+                GIF生成開始には少し時間がかかる場合があります。開始中はページを閉じないでお待ちください。
               </p>
             </div>
           </div>
