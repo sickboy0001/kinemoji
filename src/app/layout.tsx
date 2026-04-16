@@ -4,6 +4,7 @@ import Navigation from "@/components/layout/Navigations";
 import Footer from "@/components/layout/Footer";
 import { GoogleAnalytics } from "@next/third-parties/google";
 import { ToastContainer } from "@/components/ui/toast";
+import { auth, signIn, signOut } from "@/auth";
 
 export const metadata: Metadata = {
   title: "kinemoji - ウゴクモジ",
@@ -15,19 +16,16 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // 認証機能は現在無効化されています
-  const session = null;
+  const session = await auth();
 
   const handleSignIn = async () => {
     "use server";
-    // Google ログインは現在無効化されています
-    console.log("Sign in not implemented");
+    await signIn("google", { redirectTo: "/" });
   };
 
   const handleSignOut = async () => {
     "use server";
-    // ログアウトは現在無効化されています
-    console.log("Sign out not implemented");
+    await signOut({ redirectTo: "/" });
   };
 
   return (

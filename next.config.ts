@@ -1,6 +1,22 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "lh3.googleusercontent.com",
+        port: "",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "pub-39f349e1ff8d4e5fb729e7fc4866e158.r2.dev", // R2 公開 URL も追加
+        port: "",
+        pathname: "/**",
+      },
+    ],
+  },
   async rewrites() {
     return [
       {
