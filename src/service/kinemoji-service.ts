@@ -1,8 +1,9 @@
 import { db } from "@/lib/turso/db";
 import { kinemojis } from "@/db/schema";
-import { eq, desc, and } from "drizzle-orm";
+import { eq, desc, and, inArray } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { ensureMillisecondTimestamp } from "@/lib/utils";
+import { deleteKinemojiImage } from "./kinemoji-upload-service";
 
 type KinemojiWithDate = Omit<
   Awaited<ReturnType<typeof db.query.kinemojis.findMany>>[number],
@@ -86,10 +87,34 @@ export const kinemojiService = {
     return result[0];
   },
 
-  async delete(id: string, creatorId: string) {
-    return await db
-      .delete(kinemojis)
-      .where(and(eq(kinemojis.id, id), eq(kinemojis.creatorId, creatorId)));
+  async delete(id: string, creatorId?: string) {
+    // 削除前に画像URLを取得
+    const kinemoji = await this.getById(id);
+    if (kinemoji?.imageUrl) {
+      await deleteKinemojiImage(kinemoji.imageUrl);
+    }
+
+    if (creatorId) {
+      return await db
+        .delete(kinemojis)
+        .where(and(eq(kinemojis.id, id), eq(kinemojis.creatorId, creatorId)));
+    }
+    return await db.delete(kinemojis).where(eq(kinemojis.id, id));
+  },
+
+  async deleteMany(ids: string[]) {
+    // 削除前に全ての画像URLを取得して削除
+    const items = await db.query.kinemojis.findMany({
+      where: inArray(kinemojis.id, ids),
+    });
+
+    for (const item of items) {
+      if (item.imageUrl) {
+        await deleteKinemojiImage(item.imageUrl);
+      }
+    }
+
+    return await db.delete(kinemojis).where(inArray(kinemojis.id, ids));
   },
 
   async updateStatus(

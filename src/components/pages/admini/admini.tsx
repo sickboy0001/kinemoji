@@ -2,20 +2,21 @@
 
 import { useEffect, useState } from "react";
 import { LookerDashboard } from "./looker_dashboard";
+import { KinemojiDataTable } from "./kinemoji_data_table";
 
 export default function AdminiPage() {
   const [mounted, setMounted] = useState(false);
-  const [activeTab, setActiveTab] = useState<"looker" | "og">("looker");
+  const [activeTab, setActiveTab] = useState<"looker" | "list">("looker");
 
   useEffect(() => {
     const savedTab = localStorage.getItem("admini_active_tab");
-    if (savedTab === "looker" || savedTab === "og") {
-      setActiveTab(savedTab);
+    if (savedTab === "looker" || savedTab === "list") {
+      setActiveTab(savedTab as any);
     }
     setMounted(true);
   }, []);
 
-  const handleTabChange = (tab: "looker" | "og") => {
+  const handleTabChange = (tab: "looker" | "list") => {
     setActiveTab(tab);
     localStorage.setItem("admini_active_tab", tab);
   };
@@ -43,6 +44,16 @@ export default function AdminiPage() {
           >
             Looker Studio
           </button>
+          <button
+            onClick={() => handleTabChange("list")}
+            className={`flex-1 py-3 rounded-lg font-medium transition-all ${
+              activeTab === "list"
+                ? "bg-white shadow-sm text-orange-600"
+                : "text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            データ一覧・削除
+          </button>
         </div>
 
         {/* Tab Content */}
@@ -52,6 +63,8 @@ export default function AdminiPage() {
               <LookerDashboard />
             </div>
           )}
+
+          {activeTab === "list" && <KinemojiDataTable />}
         </div>
       </div>
     </div>

@@ -13,7 +13,12 @@ export async function generateMetadata({
 
   if (!kinemoji) return {};
 
-  const title = "kimemoji";
+  const displayText =
+    kinemoji.text.length > 15
+      ? kinemoji.text.substring(0, 15) + "..."
+      : kinemoji.text;
+  const title = `kinemoji | ${displayText} (${kinemoji.type})`;
+  const ogTitle = "kinemoji";
   const description = `${kinemoji.text} `;
   const imageUrl = kinemoji.imageUrl;
 
@@ -21,14 +26,14 @@ export async function generateMetadata({
     title,
     description,
     openGraph: {
-      title,
+      title: ogTitle,
       description,
       images: imageUrl ? [imageUrl] : [],
       type: "website",
     },
     twitter: {
       card: "summary_large_image",
-      title,
+      title: ogTitle,
       description,
       images: imageUrl ? [imageUrl] : [],
     },

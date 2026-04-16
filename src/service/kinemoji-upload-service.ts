@@ -1,6 +1,10 @@
 "use server";
 
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import {
+  S3Client,
+  PutObjectCommand,
+  DeleteObjectCommand,
+} from "@aws-sdk/client-s3";
 
 const s3Client = new S3Client({
   region: "auto",
@@ -19,6 +23,32 @@ function generateRandomId(length: number): string {
     result += chars.charAt(Math.floor(Math.random() * chars.length));
   }
   return result;
+}
+
+export async function deleteKinemojiImage(imageUrl: string) {
+  try {
+    // URL からファイル名を抽出
+    const publicUrl = process.env.R2_PUBLIC_URL!;
+    const fileName = imageUrl.replace(`${publicUrl}/`, "");
+
+    if (fileName === imageUrl) {
+      console.warn("Could not extract file name from URL:", imageUrl);
+      return { success: false, error: "Invalid URL" };
+    }
+
+    const command = new DeleteObjectCommand({
+      Bucket: process.env.R2_BUCKET_NAME!,
+      Key: fileName,
+    });
+
+    await s3Client.send(command);
+    return { success: true };
+  } catch (error) {
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error";
+    console.error("Delete R2 error:", errorMessage);
+    return { success: false, error: "Failed to delete image from R2" };
+  }
 }
 
 export async function uploadKinemojiImage(formData: FormData) {
