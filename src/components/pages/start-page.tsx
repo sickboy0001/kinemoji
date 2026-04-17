@@ -23,6 +23,7 @@ export default function StartPage() {
   const [heroText, setHeroText] = useState("Kinemoji");
   const [catchphraseIndex, setCatchphraseIndex] = useState(0);
   const [scale, setScale] = useState(1);
+  const [isMobile, setIsMobile] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -34,9 +35,12 @@ export default function StartPage() {
 
   useEffect(() => {
     const updateScale = () => {
+      const mobile = window.innerWidth < 768;
+      setIsMobile(mobile);
+
       if (containerRef.current) {
         const containerWidth = containerRef.current.offsetWidth - 32;
-        const baseWidth = window.innerWidth < 768 ? 320 : 600;
+        const baseWidth = mobile ? 320 : 600;
         const s = Math.min(1, containerWidth / baseWidth);
         setScale(s);
       }
@@ -63,16 +67,10 @@ export default function StartPage() {
             <LupinDisplay
               text={heroText}
               lines={[heroText]}
-              canvasWidth={window.innerWidth < 768 ? 320 : 600}
-              canvasHeight={window.innerWidth < 768 ? 120 : 200}
+              canvasWidth={isMobile ? 320 : 600}
+              canvasHeight={isMobile ? 120 : 200}
               fontSize={
-                heroText.length > 10
-                  ? window.innerWidth < 768
-                    ? 24
-                    : 40
-                  : window.innerWidth < 768
-                    ? 48
-                    : 80
+                heroText.length > 10 ? (isMobile ? 24 : 40) : isMobile ? 48 : 80
               }
               foreColor="#000000"
               backColor="#ffffff"

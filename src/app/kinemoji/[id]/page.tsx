@@ -20,7 +20,10 @@ export async function generateMetadata({
   const title = `kinemoji | ${displayText} (${kinemoji.type})`;
   const ogTitle = "kinemoji";
   const description = `${kinemoji.text} `;
-  const imageUrl = kinemoji.imageUrl;
+
+  const baseUrl =
+    process.env.NEXT_PUBLIC_APP_URL || "https://kinemoji.netlify.app";
+  const ogpImageUrl = `${baseUrl}/api/og?id=${id}`;
 
   return {
     title,
@@ -28,14 +31,14 @@ export async function generateMetadata({
     openGraph: {
       title: ogTitle,
       description,
-      images: imageUrl ? [imageUrl] : [],
+      images: [ogpImageUrl],
       type: "website",
     },
     twitter: {
       card: "summary_large_image",
       title: ogTitle,
       description,
-      images: imageUrl ? [imageUrl] : [],
+      images: [ogpImageUrl],
     },
   };
 }
