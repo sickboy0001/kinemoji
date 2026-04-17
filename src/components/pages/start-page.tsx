@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,6 +22,8 @@ const CATCHPHRASES = [
 export default function StartPage() {
   const [heroText, setHeroText] = useState("Kinemoji");
   const [catchphraseIndex, setCatchphraseIndex] = useState(0);
+  const [scale, setScale] = useState(1);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -30,19 +32,48 @@ export default function StartPage() {
     return () => clearInterval(timer);
   }, []);
 
+  useEffect(() => {
+    const updateScale = () => {
+      if (containerRef.current) {
+        const containerWidth = containerRef.current.offsetWidth - 32;
+        const baseWidth = window.innerWidth < 768 ? 320 : 600;
+        const s = Math.min(1, containerWidth / baseWidth);
+        setScale(s);
+      }
+    };
+
+    updateScale();
+    window.addEventListener("resize", updateScale);
+    return () => window.removeEventListener("resize", updateScale);
+  }, []);
+
   return (
     <div className="flex flex-col min-h-screen bg-white font-sans overflow-x-hidden">
       {/* ヒーローエリア */}
-      <section className="relative pt-20 pb-32 px-4 overflow-hidden bg-slate-50">
-        <div className="max-w-7xl mx-auto flex flex-col items-center text-center">
+      <section className="relative pt-12 md:pt-20 pb-20 md:pb-32 px-4 overflow-hidden bg-slate-50">
+        <div
+          className="max-w-7xl mx-auto flex flex-col items-center text-center"
+          ref={containerRef}
+        >
           {/* 動くロゴ演出 */}
-          <div className="mb-12 shadow-2xl rounded-xl overflow-hidden bg-white">
+          <div
+            className="mb-8 md:mb-12 shadow-2xl rounded-xl overflow-hidden bg-white origin-center transition-transform"
+            style={{ transform: `scale(${scale})` }}
+          >
             <LupinDisplay
               text={heroText}
               lines={[heroText]}
-              canvasWidth={min(600, 320)}
-              canvasHeight={min(200, 120)}
-              fontSize={heroText.length > 10 ? 40 : 80}
+              canvasWidth={window.innerWidth < 768 ? 320 : 600}
+              canvasHeight={window.innerWidth < 768 ? 120 : 200}
+              fontSize={
+                heroText.length > 10
+                  ? window.innerWidth < 768
+                    ? 24
+                    : 40
+                  : window.innerWidth < 768
+                    ? 48
+                    : 80
+              }
               foreColor="#000000"
               backColor="#ffffff"
             />
@@ -245,10 +276,6 @@ export default function StartPage() {
       `}</style>
     </div>
   );
-}
-
-function min(a: number, b: number) {
-  return a; // Simple placeholder for SSR safety if needed, but here we just use numbers
 }
 
 function StyleCard({ type, heroText }: { type: any; heroText: string }) {

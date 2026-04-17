@@ -5,7 +5,6 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "postbuild": "echo 'Skipping playwright install - using @sparticuz/chromium'",
     "start": "next start",
     "lint": "eslint",
     "netlify-dev": "netlify dev"

@@ -92,12 +92,31 @@ export function KinemojiNewPage() {
   const [backColor, setBackColor] = useState("#000000");
   const [previewText, setPreviewText] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [scale, setScale] = useState(1);
   const displayRef = useRef<HTMLDivElement>(null);
+  const previewContainerRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
   // デフォルトサイズ
   const width = 400;
   const height = 300;
+
+  useEffect(() => {
+    const updateScale = () => {
+      if (previewContainerRef.current) {
+        const isMobile = window.innerWidth < 768;
+        const padding = isMobile ? 0 : 64; // モバイル時はカードのパディングを0にする
+        const containerWidth =
+          previewContainerRef.current.offsetWidth - padding;
+        const s = Math.min(1, containerWidth / width);
+        setScale(s);
+      }
+    };
+
+    updateScale();
+    window.addEventListener("resize", updateScale);
+    return () => window.removeEventListener("resize", updateScale);
+  }, []);
 
   const handleTypeChange = (newType: AnimationType) => {
     setType(newType);
@@ -366,14 +385,18 @@ export function KinemojiNewPage() {
                 プレビュー
               </Label>
             </div>
-            <div className="bg-neutral-100 rounded-3xl flex items-start justify-center min-h-[500px] border-2 border-dashed border-neutral-200 overflow-hidden p-8 shadow-inner">
+            <div
+              ref={previewContainerRef}
+              className="bg-neutral-100 rounded-3xl flex items-center justify-center min-h-[300px] md:min-h-[500px] border-2 border-dashed border-neutral-200 overflow-hidden p-0 md:p-8 shadow-inner"
+            >
               {previewText ? (
                 <div
                   ref={displayRef}
-                  className="shadow-2xl rounded-sm overflow-hidden ring-8 ring-white/50"
+                  className="shadow-2xl rounded-sm overflow-hidden ring-4 md:ring-8 ring-white/50 origin-center transition-transform shrink-0"
                   style={{
                     width: `${width}px`,
                     height: `${height}px`,
+                    transform: `scale(${scale})`,
                   }}
                 >
                   <KinemojiDisplay
