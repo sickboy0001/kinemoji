@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { generateSecurityToken } from "@/lib/kinemoji";
 
 const EXTERNAL_API_URL =
   process.env.EXTERNAL_API_URL ||
@@ -57,13 +58,19 @@ export async function POST(req: Request) {
       JSON.stringify(requestBody, null, 2),
     );
 
+    // X-Security-Token を生成
+    const token = generateSecurityToken();
+
     // 外部 API サーバーを叩く
     const externalUrl = `${EXTERNAL_API_URL}/api/kinemoji/gif`;
     console.log("Calling external API:", externalUrl);
 
     const externalResponse = await fetch(externalUrl, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "X-Security-Token": token,
+      },
       body: JSON.stringify(requestBody),
     });
 

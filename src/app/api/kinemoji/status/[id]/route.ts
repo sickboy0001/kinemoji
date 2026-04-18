@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { kinemojiService } from "@/service/kinemoji-service";
+import { generateSecurityToken } from "@/lib/kinemoji";
 
 const EXTERNAL_API_URL =
   process.env.EXTERNAL_API_URL ||
@@ -33,8 +34,14 @@ export async function GET(
           "Syncing status from external API:",
           `${EXTERNAL_API_URL}/api/kinemoji/status/${kinemoji.id}`,
         );
+        const token = generateSecurityToken();
         const externalResponse = await fetch(
           `${EXTERNAL_API_URL}/api/kinemoji/status/${kinemoji.id}`,
+          {
+            headers: {
+              "X-Security-Token": token,
+            },
+          },
         );
         console.log(
           "External API status sync response:",
