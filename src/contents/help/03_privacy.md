@@ -12,4 +12,4 @@
 ### 3. お問い合わせ
 投稿の削除依頼や不適切なコンテンツの報告、その他のお問い合わせは、以下の窓口までご連絡ください。
 
-[X（旧Twitter）＠dodoitu0001](＠dodoitu0001)
+[Contact:＠dodoitu0001](https://x.com/dodoitu0001)

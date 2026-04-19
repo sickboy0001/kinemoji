@@ -178,42 +178,6 @@ export function KinemojiNewPage() {
       const { id } = await gifResponse.json();
       console.log("GIF generation started:", { id });
 
-      // ポーリングで完了を待つ（最大 120 秒）
-      // 一覧側の画面で待つこととするの以下の処理は不要
-
-      // let status = "pending";
-      // let shortId = "";
-      // let attempts = 0;
-      // const maxAttempts = 60; // 2 秒間隔で 120 秒
-
-      // while (
-      //   (status === "pending" || status === "processing") &&
-      //   attempts < maxAttempts
-      // ) {
-      //   await new Promise((resolve) => setTimeout(resolve, 2000)); // 2 秒待機
-
-      //   const statusResponse = await fetch(`/kinemoji/status/${id}`);
-      //   if (statusResponse.ok) {
-      //     const data = await statusResponse.json();
-      //     status = data.status;
-      //     // shortId が取得できれば保存（完了後の遷移に使用）
-      //     // API のレスポンスに shortId が含まれていない場合は id をそのまま使う
-      //     shortId = data.shortId || data.id;
-
-      //     if (status === "completed") {
-      //       break;
-      //     }
-      //     if (status === "failed") {
-      //       throw new Error(data.error || "GIF 生成に失敗しました");
-      //     }
-      //   }
-      //   attempts++;
-      // }
-
-      // if (status !== "completed") {
-      //   throw new Error("GIF 生成がタイムアウトしました");
-      // }
-
       toast.success("作成開始！");
       router.push(`/kinemoji/list?id=${id}`);
     } catch (error) {

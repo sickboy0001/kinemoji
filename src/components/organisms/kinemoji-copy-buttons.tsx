@@ -1,7 +1,8 @@
 "use client";
 
-import { ExternalLink, Send } from "lucide-react";
+import { Copy, Download, ExternalLink, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 interface KinemojiCopyButtonsProps {
   shortId: string;
@@ -30,15 +31,40 @@ export function KinemojiCopyButtons({
         document.execCommand("copy");
         textArea.remove();
       }
-      alert(`${label}をコピーしました！`);
+      toast.success(`${label}をコピーしました！`);
     } catch (err) {
       console.error("Copy failed:", err);
-      alert("コピーに失敗しました");
+      toast.error("コピーに失敗しました");
     }
   };
 
   const shareUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/kinemoji/${shortId}`;
 
+  const handleDownload = () => {
+    if (!imageUrl) return;
+
+    // 日付（YYYYMMDD）を取得
+    const now = new Date();
+    const dateStr =
+      now.getFullYear().toString() +
+      (now.getMonth() + 1).toString().padStart(2, "0") +
+      now.getDate().toString().padStart(2, "0");
+
+    const filename = `${dateStr}_kinemoji-${shortId}.gif`;
+    const downloadUrl = `/api/download?url=${encodeURIComponent(
+      imageUrl,
+    )}&filename=${encodeURIComponent(filename)}`;
+
+    // API経由でダウンロードを強制
+    const a = document.createElement("a");
+    a.href = downloadUrl;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
+
+  /*
   const handleXPost = () => {
     const xText = encodeURIComponent(`${text}\n#kinemoji`);
     const xUrl = encodeURIComponent(shareUrl);
@@ -47,6 +73,7 @@ export function KinemojiCopyButtons({
       "_blank",
     );
   };
+  */
 
   return (
     <div className="flex flex-wrap gap-3">
@@ -93,6 +120,7 @@ export function KinemojiCopyButtons({
           </Button>
         </div>
       )}
+      {/* 
       <Button
         variant="default"
         className="bg-neutral-900 hover:bg-neutral-800 text-white flex items-center gap-2 rounded-lg px-4 font-bold text-xs h-9 shadow-md transition-transform active:scale-95"
@@ -101,6 +129,27 @@ export function KinemojiCopyButtons({
         <Send className="h-4 w-4" />
         Xにポスト
       </Button>
+      */}
+
+      <Button
+        variant="outline"
+        onClick={() => copyToClipboard(`${text}\n${shareUrl}`, "テキストとURL")}
+        className="rounded-lg border-neutral-200 hover:border-neutral-900 transition-all font-medium text-xs h-9"
+      >
+        <Copy className="h-4 w-4 mr-2" />
+        テキストとURLをコピー
+      </Button>
+
+      {imageUrl && (
+        <Button
+          variant="default"
+          onClick={handleDownload}
+          className="bg-neutral-900 hover:bg-neutral-800 text-white flex items-center gap-2 rounded-lg px-4 font-bold text-xs h-9 shadow-md transition-transform active:scale-95"
+        >
+          <Download className="h-4 w-4" />
+          保存
+        </Button>
+      )}
     </div>
   );
 }
